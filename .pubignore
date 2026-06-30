@@ -1,1 +1,8 @@
 docs/
+FORME/
+build/
+.dart_tool/
+.flutter-plugins-dependencies
+.idea/
+*.iml
+pubspec.lock
