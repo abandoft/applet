@@ -1,5 +1,5 @@
 name: applet
-description: "A JSF-backed JavaScript hot-update framework for Flutter widgets."
+description: "Flutter-based JavaScript hot-update framework, uses a controlled runtime to drive native UI."
 version: 1.0.0
 homepage: https://github.com/abandoft/applet
 
@@ -16,7 +16,3 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-
-dependency_overrides:
-  jsf:
-    path: ../jsf
