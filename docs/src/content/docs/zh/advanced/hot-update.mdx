@@ -1,0 +1,86 @@
+---
+title: 热更新交付
+description: 资源文件、源码、Bundle、导入映射、签名和回滚。
+sidebar:
+  order: 2
+---
+
+Applet 可以从内置资源文件、内联源码或 `AppletBundle` 加载 JavaScript。代码来自哪里、
+是否可信，由宿主决定。
+
+## 资源文件 applet
+
+内置工具、本地示例和随 App 发布的 applet 使用资源文件：
+
+```dart
+const Applet.asset('src/app.js');
+```
+
+## 内联源码
+
+测试、生成式 demo 或受控预览可以使用内联源码：
+
+```dart
+Applet.source('''
+  import "@app/material";
+  export default function App() {
+    return Text("Preview");
+  }
+''');
+```
+
+## Bundle
+
+远程交付使用 Bundle：
+
+```dart
+await controller.loadBundle(
+  AppletBundle(
+    importMap: {'@feature/ui': 'memory:feature-ui.js'},
+    modules: {
+      'memory:feature-ui.js': uiModuleSource,
+    },
+    scripts: [
+      AppletScript(entrySource, filename: 'features/home/app.js'),
+    ],
+  ),
+);
+```
+
+## 生产交付清单
+
+- 每个远程 Bundle 都要签名；
+- 执行前校验 hash；
+- 保留回滚 manifest；
+- 按用户分组或 App 版本灰度；
+- 缓存最后一个可用版本；
+- 拒绝超出宿主 API 版本的 Bundle；
+- 日志同时记录 applet 版本、运行时版本和宿主 App 版本。
+
+Applet 提供运行时入口，发布策略仍然属于产品和宿主应用。
+
+## 灰度模型
+
+一个实用的灰度模型通常有三类产物：
+
+| 产物 | 作用 |
+| --- | --- |
+| Manifest | applet id、版本、宿主兼容范围、入口文件名和 hash。 |
+| Bundle | JavaScript 入口、被导入模块、可选共享模块。 |
+| Signature | 执行前校验来源真实性。 |
+
+宿主先下载 manifest，检查兼容性，再拉取 Bundle，校验 hash 和签名，最后调用
+`loadBundle()`。
+
+磁盘上保留上一个已验证 Bundle。如果校验或渲染失败，把新版本标记为不可用，并加载
+最后一个可用版本。
+
+## 状态保留
+
+Applet 身份稳定时，`AppletController.reload()` 和加载方法可以保留局部状态：
+
+```dart
+await controller.loadBundle(nextBundle, preserveState: true);
+```
+
+开发热重载和兼容补丁更新适合保留状态。数据模型不兼容时不要保留状态。

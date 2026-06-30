@@ -1,0 +1,90 @@
+---
+title: Performance and diagnostics
+description: Keep applets fast, observable, and recoverable in production.
+sidebar:
+  order: 5
+---
+
+Applet performance is a combination of JavaScript render cost and Flutter widget
+work. The goal is to keep JavaScript as the declarative description layer and
+let Flutter keep ownership of layout, painting, hit testing, accessibility, and
+scrolling.
+
+## Render cost
+
+A render pass performs:
+
+1. JavaScript component execution;
+2. JSON encoding of the component description;
+3. Dart JSON decoding;
+4. Flutter widget construction through `AppletRenderer`;
+5. Flutter layout and paint.
+
+Keep the JavaScript part predictable:
+
+- avoid heavy computation inside component functions;
+- define large static catalogs outside render functions;
+- normalize server data before rendering;
+- use stable keys for stateful repeated regions;
+- use host services for IO, crypto, storage, and networking.
+
+## Lists and scrolling
+
+Prefer Flutter scrollables and slivers over manual offset logic:
+
+```js
+CustomScrollView([
+  SliverAppBar.large({ title: Text("Reports") }),
+  SliverList(reports.map((report) => ReportTile(report))),
+]);
+```
+
+Use grids and slivers when the UI needs large scroll surfaces. Avoid rebuilding
+large nested arrays when only a small state value changes.
+
+## Diagnostics context
+
+When an applet fails, logs should include enough version context:
+
+| Field | Example |
+| --- | --- |
+| applet id | `material3-demo` |
+| applet version | `1.3.2+45` |
+| host app version | `2.8.0` |
+| runtime version | `1.1.0` |
+| route/screen | `/settings/theme` |
+| action name | `scanner.open` |
+| runtime limit profile | `remote-strict` |
+
+Do not log sensitive payload fields. Redact user data before sending diagnostics.
+
+## Recovery strategy
+
+Production hosts should support:
+
+- loading UI for first render;
+- error UI when no tree exists;
+- last-known-good bundle fallback;
+- remote bundle health marking;
+- explicit rollback;
+- applet disable switch when a rollout causes failures.
+
+For remote delivery, treat successful download as only the first step. A bundle
+is healthy only after it verifies, loads, renders, and survives basic user
+actions.
+
+## Measuring
+
+Measure these separately:
+
+- bundle download and verification time;
+- JavaScript runtime creation;
+- module load/evaluation time;
+- first render time;
+- action-to-render latency;
+- Flutter frame timing after render.
+
+If first render is slow, reduce module size and static initialization. If
+action latency is slow, inspect JavaScript state updates and host action round
+trips. If Flutter frames are slow, inspect widget complexity, images, slivers,
+and repaint boundaries.

@@ -1,0 +1,84 @@
+---
+title: 持续集成
+description: 检查、文档构建、example 验证和 Pages 部署。
+sidebar:
+  order: 3
+---
+
+## 推荐检查
+
+当 PR 修改 Applet、example 或 docs 时，建议运行：
+
+```sh
+flutter pub get
+dart format --set-exit-if-changed .
+flutter analyze
+flutter test
+flutter pub publish --dry-run
+(cd example && flutter pub get)
+(cd docs && pnpm install --frozen-lockfile)
+(cd docs && pnpm build)
+```
+
+## Example 验证
+
+example 是 API 约定的一部分，应该覆盖：
+
+- applet asset 加载；
+- ES module import；
+- 状态更新和回调；
+- Material 组件；
+- 自适应布局行为；
+- 运行时参数配置。
+
+涉及 UI 改动时，至少保留一次桌面端运行和一次窄视口检查。
+
+Applet 渲染器改动应补充或更新聚焦测试：
+
+- 属性归一化；
+- 枚举和颜色解析；
+- 回调/动作派发；
+- 布局辅助函数和自适应断点；
+- 非法输入是否给出可行动错误。
+
+## 文档部署
+
+文档是 `docs/` 下的 Starlight 文档站。GitHub Pages workflow 支持手动触发，
+并在 docs 文件变化时自动运行。
+
+部署站点使用：
+
+```js
+site: "https://abandoft.github.io",
+base: "/applet",
+```
+
+内部链接要考虑 base。英文页面链接到 `/applet/...`，中文页面链接到
+`/applet/zh/...`。
+
+## 发布检查表
+
+发布前检查：
+
+- 更新 `CHANGELOG.md` 和 `CHANGELOG-ZH.md`；
+- 确认 `pubspec.yaml` 依赖版本；
+- 运行 package 测试和 example 冒烟测试；
+- 构建文档站；
+- 确认 GitHub Pages 部署到预期 commit；
+- 检查通过后再打 tag。
+
+## GitHub Pages workflow
+
+文档 workflow 应支持手动触发，并在 `docs/` 或 workflow 文件变化时自动运行。当前
+Pages 构建流程是：
+
+1. checkout；
+2. 配置 pnpm；
+3. 配置 Node，并使用 lockfile cache；
+4. `pnpm install --frozen-lockfile`；
+5. `pnpm build`；
+6. 上传 `docs/dist`；
+7. 通过 GitHub Pages 部署。
+
+文档部署 workflow 可以和 Flutter package 测试保持独立，这样文档修复能快速发布。
+发布分支打 tag 前仍应运行完整 Flutter 检查。

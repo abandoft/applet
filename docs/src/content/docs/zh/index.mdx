@@ -1,0 +1,78 @@
+---
+title: 概览
+description: 用 JavaScript 交付原生 Flutter UI。
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Applet 是一个基于 Flutter 的 JavaScript 热更新框架。
+
+Applet 面向需要原生 Flutter UI、同时希望获得 SwiftUI / Jetpack Compose 式声明式
+脚本体验的团队：函数描述当前状态下的 UI，回调更新状态，Flutter 负责渲染。
+
+<CardGrid>
+  <Card title="原生渲染" icon="rocket">
+    渲染为真实 Flutter 组件，非 WebView。
+  </Card>
+  <Card title="JavaScript" icon="seti:javascript">
+    默认使用 ES module、局部状态、闭包回调。
+  </Card>
+  <Card title="贴近 Flutter" icon="document">
+    Material、Cupertino、你所熟悉的 Flutter。
+  </Card>
+  <Card title="面向生产" icon="padlock">
+    完善的运行时和热更新交付，值得信赖。
+  </Card>
+</CardGrid>
+
+## 文档章节
+
+<CardGrid>
+  <LinkCard title="快速开始" href="/applet/zh/quick-start/" description="添加 Applet、加载 JavaScript，并渲染第一个原生 Flutter UI。" />
+  <LinkCard title="入门教程" href="/applet/zh/tutorial/app-model/" description="按顺序学习应用模型、状态、主题和自适应布局。" />
+  <LinkCard title="高级用法" href="/applet/zh/advanced/modules/" description="使用模块、热更新交付、运行时安全和宿主集成。" />
+  <LinkCard title="开发文档" href="/applet/zh/development/architecture/" description="理解底层原理、开发检查和持续集成。" />
+</CardGrid>
+
+## 声明式模型
+
+Applet 借鉴 SwiftUI 和 Jetpack Compose：用函数描述当前状态下的 UI。
+不同的是，这些函数来自 Flutter 运行时加载的 JavaScript 模块。
+
+```js
+import "@app/material";
+
+export default function App() {
+  const count = State(0);
+
+  return MaterialApp({
+    theme: ThemeData({
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed({ seedColor: "#006a6a" }),
+    }),
+    home: Scaffold({
+      appBar: AppBar({ title: Text("Applet") }),
+      body: Center(
+        VStack(
+          Text("Count: " + count).style({ theme: "headlineMedium" }),
+          FilledButton.icon({
+            icon: Icon(Icons.add),
+            label: Text("Increment"),
+            onPressed: () => count.update((value) => value + 1),
+          })
+        ).gap(12).min()
+      ),
+    }),
+  });
+}
+```
+
+## 阅读路径
+
+1. 用 [快速开始](/applet/zh/quick-start/) 创建第一个 applet。
+2. 先看 [应用模型](/applet/zh/tutorial/app-model/) 和
+   [组件和页面拆分](/applet/zh/tutorial/components/)，再添加状态。
+3. 拆分 applet 或准备远程交付时，查阅
+   [模块和导入](/applet/zh/advanced/modules/)。
+4. 开发过程中用 [Dart 宿主 API](/applet/zh/api/dart-host/) 和
+   [JavaScript API](/applet/zh/api/javascript/) 作为参考。

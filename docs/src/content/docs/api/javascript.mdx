@@ -1,0 +1,145 @@
+---
+title: JavaScript API
+description: Applet modules, state helpers, actions, node helpers, and authoring conventions.
+sidebar:
+  order: 3
+---
+
+Applet JavaScript uses ES modules by default.
+
+```js
+import "@app/material";
+
+export default function App() {
+  return MaterialApp({
+    home: Scaffold({
+      body: Center(Text("Hello")),
+    }),
+  });
+}
+```
+
+## Modules
+
+| Module | Role |
+| --- | --- |
+| `@app/core` | State, actions, control helpers, node helpers. |
+| `@app/widgets` | Flutter widgets-layer primitives. |
+| `@app/layout` | Layout, slivers, adaptive helpers. |
+| `@app/material` | Material aggregate import, including core/widgets/layout. |
+| `@app/cupertino` | Cupertino aggregate import, including core/widgets/layout. |
+
+Import `@app/material` once in the entry for global component names, or use
+named imports in feature modules for editor completion.
+
+## Root export
+
+Only the default export of the entry module is used as the applet root:
+
+```js title="src/app.js"
+export default function App() {
+  return HomeScreen();
+}
+```
+
+Other files may also export defaults, but they render only when imported and
+called.
+
+## State
+
+Use `State()` for local component state:
+
+```js
+const count = State(0);
+
+FilledButton("Increment", {
+  onPressed: () => count.update((value) => value + 1),
+});
+```
+
+Use `State.key()` when state must survive loops, conditionals, or model factory
+recreation:
+
+```js
+const selected = State.key("settings.selected", "system");
+```
+
+`Remember` is an alias for `State`.
+
+State refs expose:
+
+| Member | Purpose |
+| --- | --- |
+| `value` | Read or assign the current value. |
+| `set(next)` | Set a value or reducer result. |
+| `update(reducer)` | Compute the next value from the current value. |
+| `toggle()` | Toggle a boolean value. |
+| `action(next)` | Create an action descriptor that updates the state. |
+
+## Actions and callbacks
+
+Use closures for local UI work:
+
+```js
+Switch({
+  value: enabled.value,
+  onChanged: (value) => enabled.set(value),
+});
+```
+
+Use named actions for host-owned work:
+
+```js
+IconButton({
+  icon: Icon(Icons.qr_code_scanner),
+  onPressed: Applet.action("scanner.open", { source: "checkout" }),
+});
+```
+
+Use `Applet.onAction()` when JavaScript needs to handle a named action routed
+back from Flutter:
+
+```js
+Applet.onAction("refresh", () => {
+  model.reload();
+});
+```
+
+## Control helpers
+
+| Helper | Purpose |
+| --- | --- |
+| `For(items, render)` | Render an array into children. |
+| `Show(condition, view)` | Return a view or `null`. |
+| `Children(...items)` | Flatten child lists. |
+| `Action(name, payload)` | Create an action node descriptor. |
+
+Plain JavaScript array methods are also valid:
+
+```js
+ListView(items.map((item) => ItemTile(item)));
+```
+
+## Node helpers
+
+Most component factories return an `AppletNode`. Common helper methods include:
+
+| Helper | Example |
+| --- | --- |
+| `padding(value)` | `Text("A").padding(8)` |
+| `margin(value)` | `Card(content).margin(12)` |
+| `width(value)` / `height(value)` | `Box().width(120)` |
+| `gap(value)` / `runGap(value)` | `VStack(children).gap(12)` |
+| `main(value)` / `cross(value)` | `HStack(children).main("spaceBetween")` |
+| `expanded(flex)` / `flexible(flex)` | `Panel().expanded()` |
+| `style(value)` | `Text("A").style({ theme: "titleMedium" })` |
+| `onTap(handler)` / `onPressed(handler)` | `Card(child).onTap(() => select())` |
+
+Prefer constructor props for less common Flutter arguments and helper methods
+for common layout/text adjustments.
+
+## Legacy global APIs
+
+`Applet.initialState()`, `Applet.setState()`, and `Applet.defineApp()` remain
+available for older global-script style applets. New code should prefer default
+exports, `State()`, and closure callbacks.

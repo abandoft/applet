@@ -1,0 +1,90 @@
+---
+title: Hot update delivery
+description: Assets, inline source, bundles, import maps, signatures, and rollback.
+sidebar:
+  order: 2
+---
+
+Applet can load JavaScript from bundled assets, inline source, or an
+`AppletBundle`. The host decides where code comes from and whether it is allowed
+to run.
+
+## Asset applets
+
+Use assets for local examples, built-in tools, and applets shipped with the app:
+
+```dart
+const Applet.asset('src/app.js');
+```
+
+## Inline source
+
+Use inline source for tests, generated demos, or controlled previews:
+
+```dart
+Applet.source('''
+  import "@app/material";
+  export default function App() {
+    return Text("Preview");
+  }
+''');
+```
+
+## Bundles
+
+Use bundles for remote delivery:
+
+```dart
+await controller.loadBundle(
+  AppletBundle(
+    importMap: {'@feature/ui': 'memory:feature-ui.js'},
+    modules: {
+      'memory:feature-ui.js': uiModuleSource,
+    },
+    scripts: [
+      AppletScript(entrySource, filename: 'features/home/app.js'),
+    ],
+  ),
+);
+```
+
+## Production delivery checklist
+
+- sign every remote bundle;
+- hash files and verify before execution;
+- keep a rollback manifest;
+- stage rollout by user cohort or app version;
+- cache the last known good bundle;
+- reject bundles outside host-supported API versions;
+- log applet version, runtime version, and host app version together.
+
+Applet gives you the runtime hooks. Release policy stays a product and host
+application responsibility.
+
+## Rollout model
+
+A practical rollout model has three artifacts:
+
+| Artifact | Purpose |
+| --- | --- |
+| Manifest | Applet id, version, host compatibility, entry filename, hashes. |
+| Bundle | JavaScript entry, imported modules, optional shared modules. |
+| Signature | Authenticity check before code is evaluated. |
+
+The host should download the manifest first, verify compatibility, fetch the
+bundle, verify hashes and signature, then call `loadBundle()`.
+
+Keep the previous verified bundle on disk. If verification or rendering fails,
+mark the new version unhealthy and reload the last known good bundle.
+
+## State preservation
+
+`AppletController.reload()` and load methods can preserve local state when the
+applet identity is stable:
+
+```dart
+await controller.loadBundle(nextBundle, preserveState: true);
+```
+
+Use preservation for development reloads and compatible patch updates. Do not
+preserve state across incompatible data model changes.

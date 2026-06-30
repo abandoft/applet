@@ -1,0 +1,86 @@
+---
+title: Runtime safety
+description: Configure memory, stack, and timeout limits for production.
+sidebar:
+  order: 3
+---
+
+Production hosts should configure runtime limits explicitly. Limits are applied
+when the applet controller creates the JavaScript runtime.
+
+```dart
+Applet.asset(
+  'src/app.js',
+  runtimeOptions: const AppletRuntimeOptions(
+    memoryLimitBytes: 64 * 1024 * 1024,
+    maxStackSizeBytes: 2 * 1024 * 1024,
+    timeout: Duration(seconds: 2),
+    promiseTimeout: Duration(seconds: 3),
+  ),
+);
+```
+
+## Options
+
+| Option | Purpose | Typical starting point |
+| --- | --- | --- |
+| `memoryLimitBytes` | Caps JS heap usage. | 32-128 MB for applet UI. |
+| `maxStackSizeBytes` | Caps JS call stack. | 1-4 MB. |
+| `timeout` | Caps synchronous JavaScript execution. | 500 ms for small widgets, 2 s for large bundles. |
+| `promiseTimeout` | Caps Applet waits for JavaScript promises. | 1-5 s depending on bundle size. |
+
+`timeout` protects synchronous evaluation and action dispatch. `promiseTimeout`
+protects Applet-owned async waits such as render evaluation. It is not a network
+timeout; network work should be owned by the host and have its own limits.
+
+## Choosing limits
+
+Start with generous limits in development, measure the real applet, then lower
+limits until you have enough safety margin.
+
+```dart
+const galleryRuntimeOptions = AppletRuntimeOptions(
+  memoryLimitBytes: 96 * 1024 * 1024,
+  maxStackSizeBytes: 4 * 1024 * 1024,
+  timeout: Duration(seconds: 2),
+  promiseTimeout: Duration(seconds: 3),
+);
+```
+
+Use different limit profiles for different risk levels:
+
+| Scenario | Suggested profile |
+| --- | --- |
+| Built-in asset applet | Moderate memory, 2-3 s startup timeout. |
+| Remote signed applet | Stricter memory, explicit signature and version checks. |
+| Preview or test source | Short timeout and visible error UI. |
+| Large internal tool | Measure first, then pin limits in code. |
+
+## Operational guidance
+
+- never run unverified remote code;
+- keep runtime limits different for debug and production;
+- prefetch or preload remote bundles before critical screens;
+- preserve user-visible fallback UI for load failures;
+- record runtime errors with applet version and route context;
+- treat host actions as a permission boundary.
+
+## Failure handling
+
+Use `loadingBuilder` and `errorBuilder` even when the default UI is acceptable in
+development. Production users need a predictable fallback:
+
+```dart
+Applet.asset(
+  'src/app.js',
+  runtimeOptions: productionAppletOptions,
+  loadingBuilder: (context, snapshot) =>
+      const Center(child: CircularProgressIndicator()),
+  errorBuilder: (context, error, stackTrace) =>
+      AppletFailureView(error: error),
+);
+```
+
+Log enough context to diagnose the failure without exposing sensitive payloads:
+applet id, applet version, host app version, runtime version, route, and error
+type.

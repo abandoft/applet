@@ -1,0 +1,92 @@
+---
+title: 模块和导入
+description: 使用 Flutter 风格导入入口，并把 applet 拆成模块。
+sidebar:
+  order: 1
+---
+
+Applet 默认使用 ES module。传给 `Applet.asset()` 的文件是入口模块，只有入口模块的
+`export default` 会成为根组件。其他模块也可以有默认导出，但只有被入口导入并调用时
+才会渲染。
+
+```js title="src/app.js"
+import "@app/material";
+import HomeScreen from "./screens/home.js";
+
+export default function App() {
+  return HomeScreen();
+}
+```
+
+## 内置模块
+
+| 模块 | 用途 |
+| --- | --- |
+| `@app/core` | Applet 状态、动作、children 辅助函数 |
+| `@app/widgets` | Flutter widgets 层基础组件 |
+| `@app/layout` | 布局、sliver、自适应辅助组件 |
+| `@app/material` | Material 聚合导入，包含 widgets 和 layout |
+| `@app/cupertino` | Cupertino 聚合导入 |
+
+多数应用在入口里导入一次 `@app/material`，功能模块中需要类型提示时使用命名导入：
+
+```js
+import { Scaffold, AppBar, Text, FilledButton, VStack } from "@app/material";
+```
+
+旧的 `@applet/*` 仍保留兼容，新代码建议使用 `@app/*`。
+
+## import 规则
+
+Applet 遵循标准 ES module 语法：
+
+```js
+import "@app/material";
+import { Text, FilledButton } from "@app/material";
+import SettingsScreen from "./screens/settings.js";
+```
+
+需要记住：
+
+- 模块名是字符串，JavaScript 语法要求引号；
+- 相对 import 从当前模块解析；
+- 入口模块是传给 `Applet.asset()` 的文件，或 Bundle 中的入口脚本；
+- 只有入口模块的默认导出会成为根组件；
+- 其他默认导出只是普通函数，只有被导入并调用才会渲染。
+
+## Bundle 和导入映射
+
+远程发布或灰度时，可以从 Flutter 加载 `AppletBundle`：
+
+```dart
+await controller.loadBundle(
+  AppletBundle(
+    importMap: {'@company/ui': 'memory:ui.js'},
+    modules: {
+      'memory:ui.js': 'export const Title = (text) => Text(text);',
+    },
+    scripts: [
+      AppletScript(entrySource, filename: 'remote/app.js'),
+    ],
+  ),
+);
+```
+
+业务模块名用导入映射保持稳定；同包文件之间继续用相对路径。
+
+```dart
+AppletBundle(
+  importMap: {
+    '@company/design': 'memory:design-system.js',
+  },
+  modules: {
+    'memory:design-system.js': designSystemSource,
+  },
+  scripts: [
+    AppletScript(entrySource, filename: 'campaign/app.js'),
+  ],
+);
+```
+
+导入映射适合宿主提供的库和共享设计系统。同一个 applet 内部的功能文件继续使用相对
+`import`，这样更便于整体迁移和打包。

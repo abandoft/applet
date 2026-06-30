@@ -1,0 +1,98 @@
+---
+title: Host integration
+description: Connect JavaScript applets to Flutter-owned services safely.
+sidebar:
+  order: 4
+---
+
+The Flutter host owns the application boundary. Applets can request work through
+actions; the host decides what to allow.
+
+```dart
+Applet.asset(
+  'src/app.js',
+  onAction: (action) async {
+    switch (action.name) {
+      case 'scanner.open':
+        await scanner.open(action.payload);
+        return;
+      case 'analytics.track':
+        await analytics.track(action.payload);
+        return;
+      default:
+        throw UnsupportedError('Unknown applet action: ${action.name}');
+    }
+  },
+);
+```
+
+```js
+FilledButton("Scan", {
+  onPressed: Applet.action("scanner.open", { source: "checkout" }),
+});
+```
+
+## Good host APIs
+
+Expose small, explicit actions:
+
+- `analytics.track`;
+- `navigator.openProduct`;
+- `scanner.open`;
+- `clipboard.copy`;
+- `auth.refreshSession`;
+- `download.start`.
+
+Avoid exposing raw platform channels, arbitrary file access, secure storage, or
+network clients directly to JavaScript.
+
+## Action payloads
+
+Payloads must be serializable. Treat every payload as untrusted input even when
+the applet is bundled with the app.
+
+```dart
+Future<void> handleAppletAction(AppletAction action) async {
+  switch (action.name) {
+    case 'navigator.openProduct':
+      final payload = action.payload;
+      if (payload is! Map || payload['id'] is! String) {
+        throw const FormatException('Expected product id.');
+      }
+      await navigator.openProduct(payload['id'] as String);
+      return;
+  }
+}
+```
+
+Use stable action names and versioned payloads when the API shape changes:
+
+```js
+Applet.action("navigator.openProduct", {
+  version: 1,
+  id: product.id,
+});
+```
+
+## Loading states
+
+Use `loadingBuilder` and `errorBuilder` to keep host UX predictable:
+
+```dart
+Applet.asset(
+  'src/app.js',
+  loadingBuilder: (context, snapshot) =>
+      const Center(child: CircularProgressIndicator()),
+  errorBuilder: (context, error, stackTrace) =>
+      ErrorScreen(error: error),
+);
+```
+
+## Version rules
+
+Document the host action names, payloads, and result shapes as API rules. Tie
+each applet bundle to a minimum host version.
+
+For remote bundles, check the bundle manifest before loading JavaScript. If the
+bundle requires a newer host API, show a fallback screen and keep the last known
+good version.

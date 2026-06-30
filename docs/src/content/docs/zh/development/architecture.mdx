@@ -1,0 +1,83 @@
+---
+title: 底层原理
+description: 主要分层、职责边界和扩展点。
+sidebar:
+  order: 1
+---
+
+Applet 由 Flutter 宿主层和 JavaScript 运行时组成。JavaScript 描述 UI，
+Flutter 负责渲染、布局、平台集成、无障碍、导航和原生服务。
+
+## 分层
+
+| 层 | 主要文件 | 职责 |
+| --- | --- | --- |
+| 宿主组件 | `applet_view.dart` | Flutter 组件 API、加载/错误 UI、动作观察。 |
+| Controller | `applet_controller.dart` | 运行时生命周期、模块加载、渲染快照、reload。 |
+| Bootstrap | `applet_bootstrap.dart` | JavaScript 组件工厂、状态辅助函数、回调注册。 |
+| Modules | `applet_modules.dart` | 内置 `@app/*` 模块源码和别名。 |
+| Renderer | `applet_renderer.dart` | 校验组件描述并构建真实 Flutter 组件。 |
+| Types | `types/app.d.ts` | 面向编辑器的 JavaScript API 和属性声明。 |
+
+公开 API 有意保持小。多数应用使用 `Applet.asset()` 或 `Applet.source()`。需要 reload、
+Bundle 交付或自定义生命周期时，宿主可以直接持有 `AppletController`。
+
+## 组件模型
+
+JavaScript 侧应该保持声明式。组件是函数，读取当前状态并返回组件描述。Flutter
+侧负责校验描述、解析构造器，并构建真实组件。
+
+Applet 不应该把 Flutter 变成松散的字符串 UI 系统。渲染器需要清晰的结构规范、稳定
+的回调 ID、可预测的 key，以及明确的宿主能力边界。
+
+JavaScript 组件返回的节点大致如下：
+
+```json
+{
+  "type": "Text",
+  "props": {
+    "data": "Hello"
+  }
+}
+```
+
+渲染器将 `type` 映射到 Flutter 构造器，并把 `props`（属性）归一化为 Flutter
+构造参数。
+未知组件应该给出可行动错误，而不是静默渲染为空白。
+
+## 模块加载
+
+ES module 是默认模型。传给 `Applet.asset()` 的文件是入口模块。导入映射和内置别名
+提供稳定模块名，例如 `@app/material`。
+
+原生端和 Web 的模块解析行为应该一致：
+
+- 相对 import 从当前模块解析；
+- alias 规则保持一致；
+- 未知模块给出可行动错误；
+- 宿主提供的模块必须明确暴露。
+
+## 宿主边界
+
+宿主决定脚本能做什么。脚本可以通过动作请求工作，但权限、存储、网络、统计、
+原生通道、支付和长期运行服务都应该由宿主拥有。
+
+这个边界应该尽量窄。优先暴露业务能力，而不是直接暴露底层平台原语。
+
+## 扩展点
+
+Applet 有三层扩展：
+
+| 层级 | 适用场景 |
+| --- | --- |
+| JavaScript 模块 | 组合已有 Flutter-backed 组件。 |
+| 宿主动作 | JavaScript 需要请求平台能力或业务服务。 |
+| 渲染器工厂 | 需要绑定新的 Flutter 组件或业务组件。 |
+
+优先使用能满足需求的最高层扩展。只有当某个组件必须由 Flutter 原生构建、且无法用
+现有组件表达时，才添加渲染器工厂。
+
+Applet 应保持原生端与 Web 在模块加载、运行时限制和错误报告上的行为一致。两条路径
+都验证通过后，修复才算完成。
+
+逐步渲染流程见 [渲染管线](/applet/zh/development/rendering-pipeline/)。

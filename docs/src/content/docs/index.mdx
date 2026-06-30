@@ -1,0 +1,80 @@
+---
+title: Overview
+description: Native Flutter UI, delivered from JavaScript.
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Applet is a Flutter-based JavaScript hot-update framework.
+
+Applet is designed for teams that want native Flutter UI with a scripting style
+closer to SwiftUI and Jetpack Compose: functions describe UI for the current
+state, callbacks update state, and Flutter owns rendering.
+
+<CardGrid>
+  <Card title="Native rendering" icon="rocket">
+    Renders real widgets, not a WebView.
+  </Card>
+  <Card title="JavaScript" icon="seti:javascript">
+    ES modules, local state, and closure callbacks by default.
+  </Card>
+  <Card title="Close to Flutter" icon="document">
+    Material, Cupertino, and the Flutter concepts you already know.
+  </Card>
+  <Card title="Production ready" icon="padlock">
+    Production-focused runtime behavior and hot update delivery.
+  </Card>
+</CardGrid>
+
+## Chapters
+
+<CardGrid>
+  <LinkCard title="Quick start" href="/applet/quick-start/" description="Add Applet, load JavaScript, and render the first native Flutter UI." />
+  <LinkCard title="Tutorial" href="/applet/tutorial/app-model/" description="Learn the app model, state, theming, and adaptive layout step by step." />
+  <LinkCard title="Advanced usage" href="/applet/advanced/modules/" description="Use modules, hot update delivery, runtime safety, and host integration." />
+  <LinkCard title="Development" href="/applet/development/architecture/" description="Understand internals, development checks, and continuous integration." />
+</CardGrid>
+
+## Declarative model
+
+Applet draws on SwiftUI and Jetpack Compose: write functions that describe UI
+for the current state. The difference is that those functions are JavaScript
+modules loaded by Flutter at runtime.
+
+```js
+import "@app/material";
+
+export default function App() {
+  const count = State(0);
+
+  return MaterialApp({
+    theme: ThemeData({
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed({ seedColor: "#006a6a" }),
+    }),
+    home: Scaffold({
+      appBar: AppBar({ title: Text("Applet") }),
+      body: Center(
+        VStack(
+          Text("Count: " + count).style({ theme: "headlineMedium" }),
+          FilledButton.icon({
+            icon: Icon(Icons.add),
+            label: Text("Increment"),
+            onPressed: () => count.update((value) => value + 1),
+          })
+        ).gap(12).min()
+      ),
+    }),
+  });
+}
+```
+
+## Reading path
+
+1. Use [Quick start](/applet/quick-start/) to create the first applet.
+2. Work through [App model](/applet/tutorial/app-model/) and
+   [Components and screens](/applet/tutorial/components/) before adding state.
+3. Consult [Modules and imports](/applet/advanced/modules/) when splitting
+   applets or preparing remote delivery.
+4. Use [Dart host API](/applet/api/dart-host/) and
+   [JavaScript API](/applet/api/javascript/) as references while building.

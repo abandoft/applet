@@ -1,0 +1,130 @@
+---
+title: 组件和页面拆分
+description: 将 applet 拆成页面、可复用组件和纯数据模块。
+sidebar:
+  order: 2
+---
+
+生产环境中的 Applet 不应该变成一个巨大的 `app.js`。拆分方式可以参考 Flutter、
+SwiftUI 和 Compose：简洁的入口、可复用组件、状态模型模块和主题辅助函数。
+
+## 推荐结构
+
+```text
+src/
+  app.js
+  state.js
+  theme.js
+  components.js
+  screens/
+    home.js
+    settings.js
+```
+
+`src/app.js` 只负责装配大的组件：
+
+```js title="src/app.js"
+import "@app/material";
+import { AppState } from "./state.js";
+import { appTheme } from "./theme.js";
+import HomeScreen from "./screens/home.js";
+
+export default function App() {
+  const model = AppState();
+
+  return MaterialApp({
+    theme: appTheme(model.dark),
+    home: HomeScreen(model),
+  });
+}
+```
+
+页面模块描述一个路由或一个主标签页：
+
+```js title="src/screens/home.js"
+import { SectionHeader } from "../components.js";
+
+export default function HomeScreen(model) {
+  return Scaffold({
+    appBar: AppBar({ title: Text("Home") }),
+    body: ListView([
+      SectionHeader("Pinned"),
+      ...model.items.map((item) => ItemTile(item, model)),
+    ]),
+  });
+}
+```
+
+组件模块保持单一职责：
+
+```js title="src/components.js"
+export function SectionHeader(title) {
+  return Padding(
+    Text(title).style({ theme: "titleMedium" }),
+    { padding: { left: 16, right: 16, top: 20, bottom: 8 } }
+  );
+}
+
+export function ItemTile(item, model) {
+  return ListTile({
+    leading: Icon(item.icon),
+    title: Text(item.title),
+    subtitle: Text(item.subtitle),
+    selected: model.selectedId === item.id,
+    onTap: () => model.select(item.id),
+  });
+}
+```
+
+## 数据先于 UI
+
+目录、菜单、配置一类内容保留为普通 JavaScript 对象。通过组件渲染它们，不要把大数组
+混在页面主体里：
+
+```js title="src/catalog.js"
+export const destinations = [
+  { id: "components", label: "Components", icon: Icons.widgets },
+  { id: "color", label: "Color", icon: Icons.palette },
+  { id: "typography", label: "Typography", icon: Icons.text_fields },
+];
+```
+
+```js
+NavigationBar({
+  selectedIndex: model.index,
+  onDestinationSelected: (index) => model.selectIndex(index),
+  destinations: destinations.map((item) =>
+    NavigationDestination({
+      icon: Icon(item.icon),
+      label: item.label,
+    })
+  ),
+});
+```
+
+## UI 状态
+
+依赖数据的页面都应该明确处理加载、空数据、错误和就绪状态：
+
+```js
+export function ResultsScreen(model) {
+  if (model.loading) return LoadingView();
+  if (model.error) return ErrorView(model.error, () => model.retry());
+  if (model.results.length === 0) return EmptyView();
+
+  return ResultsList(model.results);
+}
+```
+
+这样声明式模型会更清楚：每次渲染都返回当前状态对应的 UI。
+
+## 导入风格
+
+入口里导入 `@app/material`，即可获得全局 Flutter 风格组件名。功能模块中需要编辑器
+提示或更清晰依赖时，可以使用命名导入：
+
+```js
+import { Card, Icon, Icons, ListTile, Text } from "@app/material";
+```
+
+两种方式都可用。建议使用 `@app/*` 模块名；`@applet/*` 作为兼容别名保留。

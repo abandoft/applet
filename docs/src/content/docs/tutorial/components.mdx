@@ -1,0 +1,135 @@
+---
+title: Components and screens
+description: Split applets into screens, reusable components, and plain data modules.
+sidebar:
+  order: 2
+---
+
+A production applet should not grow into one large `app.js`. Use modules the
+same way you would split a Flutter, SwiftUI, or Compose app: a concise entry,
+reusable components, state model modules, and theme helpers.
+
+## Recommended shape
+
+```text
+src/
+  app.js
+  state.js
+  theme.js
+  components.js
+  screens/
+    home.js
+    settings.js
+```
+
+`src/app.js` should only compose the top-level components:
+
+```js title="src/app.js"
+import "@app/material";
+import { AppState } from "./state.js";
+import { appTheme } from "./theme.js";
+import HomeScreen from "./screens/home.js";
+
+export default function App() {
+  const model = AppState();
+
+  return MaterialApp({
+    theme: appTheme(model.dark),
+    home: HomeScreen(model),
+  });
+}
+```
+
+Screen modules should describe one route or one major tab:
+
+```js title="src/screens/home.js"
+import { SectionHeader } from "../components.js";
+
+export default function HomeScreen(model) {
+  return Scaffold({
+    appBar: AppBar({ title: Text("Home") }),
+    body: ListView([
+      SectionHeader("Pinned"),
+      ...model.items.map((item) => ItemTile(item, model)),
+    ]),
+  });
+}
+```
+
+Component modules should stay focused:
+
+```js title="src/components.js"
+export function SectionHeader(title) {
+  return Padding(
+    Text(title).style({ theme: "titleMedium" }),
+    { padding: { left: 16, right: 16, top: 20, bottom: 8 } }
+  );
+}
+
+export function ItemTile(item, model) {
+  return ListTile({
+    leading: Icon(item.icon),
+    title: Text(item.title),
+    subtitle: Text(item.subtitle),
+    selected: model.selectedId === item.id,
+    onTap: () => model.select(item.id),
+  });
+}
+```
+
+## Data before UI
+
+Keep catalog data as plain JavaScript objects. Render it through components
+instead of mixing large arrays into screen bodies:
+
+```js title="src/catalog.js"
+export const destinations = [
+  { id: "components", label: "Components", icon: Icons.widgets },
+  { id: "color", label: "Color", icon: Icons.palette },
+  { id: "typography", label: "Typography", icon: Icons.text_fields },
+];
+```
+
+```js
+NavigationBar({
+  selectedIndex: model.index,
+  onDestinationSelected: (index) => model.selectIndex(index),
+  destinations: destinations.map((item) =>
+    NavigationDestination({
+      icon: Icon(item.icon),
+      label: item.label,
+    })
+  ),
+});
+```
+
+## UI states
+
+Every screen that depends on data should account for loading, empty, error, and
+ready states. Keep those branches obvious:
+
+```js
+export function ResultsScreen(model) {
+  if (model.loading) return LoadingView();
+  if (model.error) return ErrorView(model.error, () => model.retry());
+  if (model.results.length === 0) return EmptyView();
+
+  return ResultsList(model.results);
+}
+```
+
+This keeps the declarative model clear: each render returns the UI that matches
+the current state.
+
+## Import style
+
+Import `@app/material` in the entry so the global Flutter-shaped component names
+are available. In feature modules, use named imports when you want editor
+completion or clearer dependencies:
+
+```js
+import { Card, Icon, Icons, ListTile, Text } from "@app/material";
+```
+
+Both styles are valid. Prefer `@app/*` module names; `@applet/*` remains as a
+compatibility alias.

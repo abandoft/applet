@@ -1,0 +1,123 @@
+---
+title: Component modules
+description: Flutter-shaped component coverage for widgets, layout, Material, and Cupertino.
+sidebar:
+  order: 4
+---
+
+Applet components follow Flutter naming wherever possible. The goal is that
+Flutter developers can recognize the components, props, and theme model while
+authoring them in JavaScript.
+
+## Import modules
+
+| Module | Includes |
+| --- | --- |
+| `@app/widgets` | Text, images, icons, gestures, semantics, decoration, transforms, animation basics. |
+| `@app/layout` | Row/Column helpers, stack, wrap, constraints, scroll views, slivers, adaptive helpers. |
+| `@app/material` | Material app shell, navigation, buttons, inputs, dialogs, feedback, data, theming. |
+| `@app/cupertino` | Cupertino app shell, navigation bars, lists, pickers, dialogs, inputs, controls. |
+
+`@app/material` and `@app/cupertino` re-export core/widgets/layout APIs for
+convenience.
+
+## Material examples
+
+```js
+Scaffold({
+  appBar: AppBar({ title: Text("Components") }),
+  floatingActionButton: FloatingActionButton({
+    child: Icon(Icons.add),
+    onPressed: () => model.create(),
+  }),
+  body: ListView([
+    Card(
+      ListTile({
+        leading: Icon(Icons.palette),
+        title: Text("Color"),
+        subtitle: Text("Material 3 roles"),
+        trailing: Icon(Icons.chevron_right),
+      })
+    ),
+  ]),
+});
+```
+
+Common Material groups include:
+
+- app shells: `MaterialApp`, `Scaffold`, `AppBar`, `SliverAppBar`;
+- navigation: `NavigationBar`, `NavigationRail`, `NavigationDrawer`, tabs;
+- actions: `FilledButton`, `OutlinedButton`, `TextButton`, `IconButton`,
+  `FloatingActionButton`;
+- inputs: `TextField`, `Checkbox`, `Radio`, `Switch`, `Slider`,
+  `DropdownButton`, menus;
+- feedback: dialogs, snack bars, banners, tooltips, progress indicators;
+- data and content: cards, lists, chips, tables, expansion panels;
+- theme: `ThemeData`, `ColorScheme`, `Theme`, text style tokens.
+
+## Cupertino examples
+
+```js
+CupertinoPageScaffold({
+  navigationBar: CupertinoNavigationBar({
+    middle: Text("Settings"),
+  }),
+  child: CupertinoListSection([
+    CupertinoListTile({
+      title: Text("Notifications"),
+      trailing: CupertinoSwitch({
+        value: model.notifications,
+        onChanged: (value) => model.setNotifications(value),
+      }),
+    }),
+  ]),
+});
+```
+
+Common Cupertino groups include:
+
+- app shell and page scaffold;
+- navigation bars and tab bars;
+- list sections and form rows;
+- dialogs and action sheets;
+- buttons, switches, checkboxes, radios, sliders;
+- text fields, search fields, pickers, date/time pickers.
+
+## Layout and adaptive helpers
+
+Use Flutter layout primitives for normal layout:
+
+```js
+HStack(
+  Icon(Icons.info),
+  VStack(
+    Text("Title").style({ theme: "titleMedium" }),
+    Text("Supporting text").style({ theme: "bodyMedium" })
+  ).gap(2).expanded()
+).gap(12).cross("center");
+```
+
+Use adaptive helpers for page-level behavior:
+
+```js
+AdaptiveNavigationScaffold({
+  selectedIndex: model.section,
+  onDestinationSelected: (index) => model.selectSection(index),
+  destinations,
+  body: CurrentScreen(model),
+});
+```
+
+## Coverage policy
+
+Applet should prefer real Flutter capability over lookalike implementations.
+When a Flutter component is missing, add a renderer binding or host extension
+instead of faking behavior with unrelated widgets.
+
+For each new component, keep these pieces aligned:
+
+- JavaScript factory and prop normalization;
+- Flutter renderer implementation;
+- type declarations in `types/app.d.ts`;
+- example coverage;
+- docs and changelog entry when user-visible.

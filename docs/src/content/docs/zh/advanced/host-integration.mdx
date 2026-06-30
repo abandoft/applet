@@ -1,0 +1,94 @@
+---
+title: 宿主集成
+description: 安全地把 JavaScript applet 连接到 Flutter 宿主服务。
+sidebar:
+  order: 4
+---
+
+Flutter 宿主拥有应用边界。Applet 可以通过动作请求工作，宿主决定是否允许。
+
+```dart
+Applet.asset(
+  'src/app.js',
+  onAction: (action) async {
+    switch (action.name) {
+      case 'scanner.open':
+        await scanner.open(action.payload);
+        return;
+      case 'analytics.track':
+        await analytics.track(action.payload);
+        return;
+      default:
+        throw UnsupportedError('Unknown applet action: ${action.name}');
+    }
+  },
+);
+```
+
+```js
+FilledButton("Scan", {
+  onPressed: Applet.action("scanner.open", { source: "checkout" }),
+});
+```
+
+## 合理的宿主 API
+
+暴露小而明确的动作：
+
+- `analytics.track`;
+- `navigator.openProduct`;
+- `scanner.open`;
+- `clipboard.copy`;
+- `auth.refreshSession`;
+- `download.start`.
+
+不要把原始平台通道、任意文件访问、安全存储或网络 client 直接暴露给 JavaScript。
+
+## 动作载荷
+
+载荷必须可序列化。即使 applet 随 App 内置，也要把每个载荷当作不可信输入。
+
+```dart
+Future<void> handleAppletAction(AppletAction action) async {
+  switch (action.name) {
+    case 'navigator.openProduct':
+      final payload = action.payload;
+      if (payload is! Map || payload['id'] is! String) {
+        throw const FormatException('Expected product id.');
+      }
+      await navigator.openProduct(payload['id'] as String);
+      return;
+  }
+}
+```
+
+约定变化时使用稳定动作名和版本化载荷：
+
+```js
+Applet.action("navigator.openProduct", {
+  version: 1,
+  id: product.id,
+});
+```
+
+## 加载状态
+
+使用 `loadingBuilder` 和 `errorBuilder` 让宿主 UX 可控：
+
+```dart
+Applet.asset(
+  'src/app.js',
+  loadingBuilder: (context, snapshot) =>
+      const Center(child: CircularProgressIndicator()),
+  errorBuilder: (context, error, stackTrace) =>
+      ErrorScreen(error: error),
+);
+```
+
+## 版本约定
+
+把宿主动作名称、载荷和结果形状作为 API 约定维护。每个 applet Bundle
+应绑定最低宿主版本。
+
+远程 Bundle 加载前先检查 manifest。如果 Bundle 需要更新的宿主 API，显示兜底
+页面，并保留最后一个可用版本。

@@ -1,0 +1,128 @@
+---
+title: 状态和数据流
+description: 局部状态、稳定键、动作和模型对象。
+sidebar:
+  order: 3
+---
+
+状态应该尽量靠近使用它的 UI。根据状态渲染，在事件中更新状态。
+
+## 局部状态
+
+```js
+export function Counter() {
+  const count = State(0);
+
+  return VStack(
+    Text("Count: " + count),
+    FilledButton("Increment", {
+      onPressed: () => count.update((value) => value + 1),
+    })
+  ).gap(8);
+}
+```
+
+`State()` 返回引用对象。拼接字符串时可以直接使用，需要原始值时使用 `.value`。
+
+使用 `.set()`、`.update()` 或 `.toggle()` 修改局部状态：
+
+```js
+const enabled = State(true);
+
+Switch({
+  value: enabled.value,
+  onChanged: (value) => enabled.set(value),
+});
+
+IconButton({
+  icon: Icon(enabled.value ? Icons.visibility : Icons.visibility_off),
+  onPressed: () => enabled.toggle(),
+});
+```
+
+状态位于循环、条件分支或共享模型工厂里时，使用 `State.key()` 提供稳定键。
+
+```js
+export function GalleryState() {
+  const section = State.key("gallery.section", 0);
+  const dark = State.key("gallery.dark", false);
+
+  return {
+    get section() {
+      return section.value;
+    },
+    get dark() {
+      return dark.value;
+    },
+    selectSection(index) {
+      section.value = index;
+    },
+    toggleTheme() {
+      dark.toggle();
+    },
+  };
+}
+```
+
+## 宿主动作
+
+本地 UI 行为用 JavaScript 回调。需要跨到宿主的工作用 `Applet.action()`。
+
+```js
+IconButton({
+  icon: Icon(Icons.qr_code_scanner),
+  tooltip: "Scan",
+  onPressed: Applet.action("scanner.open", { flow: "checkout" }),
+});
+```
+
+宿主会收到包含 `name` 和可序列化 `payload` 的 `AppletAction`。
+
+属于 Flutter 的副作用使用宿主动作：
+
+```js
+FilledButton("Track purchase", {
+  onPressed: Applet.action("analytics.track", {
+    name: "purchase_tap",
+    source: "checkout",
+  }),
+});
+```
+
+## 模型工厂
+
+更大的页面可以用模型工厂包装多个 state ref：
+
+```js
+export function SettingsState() {
+  const dark = State.key("settings.dark", false);
+  const density = State.key("settings.density", "comfortable");
+
+  return {
+    get dark() {
+      return dark.value;
+    },
+    get density() {
+      return density.value;
+    },
+    toggleDark() {
+      dark.toggle();
+    },
+    setDensity(value) {
+      density.value = value;
+    },
+  };
+}
+```
+
+```js
+export function SettingsScreen(model) {
+  return ListView([
+    SwitchListTile({
+      title: Text("Dark theme"),
+      value: model.dark,
+      onChanged: () => model.toggleDark(),
+    }),
+  ]);
+}
+```

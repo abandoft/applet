@@ -1,0 +1,136 @@
+---
+title: Dart 宿主 API
+description: Flutter 侧组件、controller 生命周期、Bundle、动作和运行时参数。
+sidebar:
+  order: 2
+---
+
+Dart 宿主 API 负责把 applet 嵌入 Flutter，并控制运行时边界。
+
+## Applet 组件
+
+随 Flutter asset 发布的源码使用 `Applet.asset()`：
+
+```dart
+const Applet.asset('src/app.js');
+```
+
+测试、预览或生成源码使用 `Applet.source()`：
+
+```dart
+Applet.source('''
+  import "@app/material";
+  export default function App() {
+    return Text("Preview");
+  }
+''');
+```
+
+常用参数：
+
+| 参数 | 作用 |
+| --- | --- |
+| `controller` | 使用宿主外部持有的 `AppletController`。 |
+| `assetBundle` | 覆盖 `Applet.asset()` 使用的资源包。 |
+| `filename` | JavaScript stack trace 中显示的文件名。 |
+| `module` | 入口是否为 ES module，默认 `true`。 |
+| `runtimeOptions` | Applet 组件自己持有 controller 时使用的运行时限制。 |
+| `renderer` | 可选渲染器覆盖，用于自定义组件工厂。 |
+| `loadingBuilder` | 首个组件树出现前的宿主加载 UI。 |
+| `errorBuilder` | 首个组件树出现前加载或渲染失败的宿主错误 UI。 |
+| `onAction` | 宿主观察 JavaScript 命名动作和事件动作。 |
+
+`AppletView` 是较长的兼容名称。应用代码优先使用 `Applet`。
+
+## AppletController
+
+宿主需要明确控制生命周期时使用 controller：
+
+```dart
+final controller = AppletController(
+  options: const AppletRuntimeOptions(
+    memoryLimitBytes: 64 * 1024 * 1024,
+    maxStackSizeBytes: 2 * 1024 * 1024,
+  ),
+);
+
+await controller.loadAsset('src/app.js');
+```
+
+主要成员：
+
+| 成员 | 作用 |
+| --- | --- |
+| `snapshot` | 最新 `AppletSnapshot`。 |
+| `runtime` | 高级集成可直接访问运行时。 |
+| `hasTree` | 是否至少渲染过一个组件树。 |
+| `loadSource(source)` | 加载一个源码字符串并渲染。 |
+| `loadAsset(assetKey)` | 加载 Flutter asset 并渲染。 |
+| `loadBundle(bundle)` | 注册模块、导入映射和脚本，然后渲染。 |
+| `reload()` | 重载上一次 asset、source 或 Bundle。 |
+| `render()` | 重新执行 JavaScript 渲染函数。 |
+| `dispatchAction(action)` | 将 Flutter 事件或动作派发回 JavaScript。 |
+| `readState()` | 为旧式全局状态集成读取 `Applet.state`。 |
+
+controller 拥有 JavaScript 运行时。宿主自己持有 controller 时，需要在生命周期结束
+后释放。
+
+## AppletBundle
+
+远程或灰度交付使用 Bundle：
+
+```dart
+final bundle = AppletBundle(
+  importMap: {
+    '@company/design': 'memory:design-system.js',
+  },
+  modules: {
+    'memory:design-system.js': designSystemSource,
+  },
+  scripts: [
+    AppletScript(entrySource, filename: 'campaign/app.js'),
+  ],
+);
+
+await controller.loadBundle(bundle);
+```
+
+`modules` 会在 scripts 之前注册。`importMap` 将稳定模块名映射到模块标识。
+`scripts` 在模块可用后执行。
+
+## 运行时参数
+
+`AppletRuntimeOptions` 配置 JavaScript 运行时限制：
+
+| 参数 | 默认值 | 作用 |
+| --- | --- | --- |
+| `memoryLimitBytes` | `null` | 最大 JavaScript 堆内存。 |
+| `maxStackSizeBytes` | `null` | 最大 JavaScript 调用栈。 |
+| `timeout` | `2s` | 最大同步 JavaScript 执行时间。 |
+| `promiseTimeout` | `3s` | Applet 等待 JavaScript Promise 的最长时间。 |
+
+生产环境尤其是远程 Bundle，应显式设置限制。
+
+## 动作
+
+JavaScript 可以发出动作：
+
+```js
+Applet.action("scanner.open", { source: "checkout" });
+```
+
+宿主通过 `onAction` 观察：
+
+```dart
+Applet.asset(
+  'src/app.js',
+  onAction: (action) async {
+    if (action.name == 'scanner.open') {
+      await scanner.open(action.payload);
+    }
+  },
+);
+```
+
+`AppletAction` 包含 `name`、可选载荷 `payload`、`toJson()` 和 `withPayload()`。当
+Flutter 事件携带值时，例如 `onChanged`，渲染器会使用 `withPayload()` 合并值。

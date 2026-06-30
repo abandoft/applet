@@ -1,0 +1,111 @@
+---
+title: 快速开始
+description: 添加依赖、加载 JavaScript 入口，并渲染原生 Flutter UI。
+sidebar:
+  order: 1
+---
+
+import { Steps, FileTree, Aside } from '@astrojs/starlight/components';
+
+<Steps>
+
+1. **添加依赖。**
+
+   ```yaml
+   dependencies:
+     applet: ^1.0.0
+   ```
+
+2. **声明 applet 源码 asset。**
+
+   ```yaml
+   flutter:
+     uses-material-design: true
+     assets:
+       - src/
+   ```
+
+3. **在 Flutter 中加载入口。**
+
+   ```dart
+   import 'package:applet/applet.dart';
+   import 'package:flutter/widgets.dart';
+
+   void main() {
+     runApp(const Applet.asset('src/app.js'));
+   }
+   ```
+
+4. **编写 `src/app.js`。**
+
+   ```js
+   import "@app/material";
+
+   export default function App() {
+     const count = State(0);
+
+     return MaterialApp({
+       debugShowCheckedModeBanner: false,
+       title: "Applet",
+       theme: ThemeData({
+         useMaterial3: true,
+         colorScheme: ColorScheme.fromSeed({ seedColor: "#006a6a" }),
+       }),
+       home: Scaffold({
+         appBar: AppBar({ title: Text("Counter") }),
+         body: Center(
+           VStack(
+             Text("Count: " + count).style({ theme: "headlineMedium" }),
+             FilledButton("Increment", {
+               onPressed: () => count.update((value) => value + 1),
+             })
+           ).gap(12).min()
+         ),
+       }),
+     });
+   }
+   ```
+
+5. **运行 Flutter。**
+
+   ```sh
+   flutter run
+   ```
+
+</Steps>
+
+## 推荐目录
+
+入口文件保持很薄，功能拆到独立模块。
+
+<FileTree>
+- src/
+  - app.js
+  - app/
+    - app.js
+    - state.js
+    - theme.js
+    - components.js
+    - screens/
+      - home.js
+      - settings.js
+</FileTree>
+
+```js title="src/app.js"
+import "@app/material";
+import App from "./app/app.js";
+
+export default App;
+```
+
+<Aside type="tip" title="默认就是模块模式">
+`Applet.asset()` 和 `Applet.source()` 默认按 ES module 运行。只有旧式全局脚本才需要
+显式传 `module: false`。
+</Aside>
+
+## 下一步
+
+- 通过 [应用模型](/applet/zh/tutorial/app-model/) 理解编写方式。
+- 用 [组件和页面拆分](/applet/zh/tutorial/components/) 组织真实页面。
+- 通过 [状态和数据流](/applet/zh/tutorial/state/) 添加局部状态。
+- 在 [运行时安全](/applet/zh/advanced/runtime-safety/) 中查看生产限制。

@@ -1,0 +1,104 @@
+---
+title: 渲染管线
+description: 源码如何变成 Flutter 组件树，以及更新如何回流。
+sidebar:
+  order: 2
+---
+
+## 首次加载
+
+1. Flutter 插入 `Applet.asset()`、`Applet.source()`，或带 controller 的
+   `AppletView`。
+2. `AppletView` 在宿主未提供 controller 时创建 `AppletController`。
+3. controller 根据 `AppletRuntimeOptions` 创建 JavaScript 运行时。
+4. 内置 Applet bootstrap 注入运行时。
+5. 注册 `@app/material` 等内置模块和别名。
+6. 从 asset、内联源码或 `AppletBundle` 加载入口源码。
+7. 解析并执行 ES module 依赖。
+8. 捕获入口模块的默认导出作为渲染函数。
+9. `render()` 调用 JavaScript 渲染函数，并将结果 JSON 编码。
+10. Flutter 解码组件描述并保存为 `AppletSnapshot`。
+11. `AppletRenderer` 根据快照中的组件树构建真实 Flutter 组件。
+
+## 更新循环
+
+事件有两种进入方式：
+
+- bootstrap 层创建的 JavaScript 闭包回调；
+- 宿主可以观察的命名 `Applet.action()`。
+
+渲染器把 Flutter 事件转成 `AppletAction`。`AppletView` 先调用可选的宿主
+`onAction`，然后让 controller 把动作派发回 JavaScript。派发后 controller
+重新渲染，并发布新的快照。
+
+```text
+Flutter event
+  -> AppletRenderer
+  -> AppletView.onAction
+  -> AppletController.dispatchAction()
+  -> JavaScript callback or Applet.onAction()
+  -> AppletController.render()
+  -> AppletSnapshot
+  -> Flutter rebuild
+```
+
+## 渲染状态
+
+每次加载、渲染或事件处理后，`AppletController` 都会保存一个 `AppletSnapshot`。
+它表示当前 applet 的渲染状态：
+
+| 字段 | 含义 |
+| --- | --- |
+| `tree` | 最近一次解码后的组件描述。 |
+| `loading` | 是否正在加载或重新加载。 |
+| `error` | 最近一次加载、渲染或派发错误。 |
+| `stackTrace` | 可用时的 Dart stack trace。 |
+| `version` | 单调递增的重建标记。 |
+
+如果已有旧组件树，后续渲染失败时 `AppletSnapshot` 可以保留旧组件树并记录错误。宿主可决定
+继续展示旧 UI，还是替换成错误页面。
+
+## 事件回调映射
+
+JavaScript 函数不能直接放进 JSON 传给 Flutter。Applet 会把函数先保存在
+JavaScript 侧的回调表里，然后在组件描述中只放一个可序列化的回调标识。
+Flutter 事件触发时，会把这个标识传回 Applet，再由 Applet 找到并执行原来的
+JavaScript 函数。
+
+因此，列表和条件 UI 中的有状态区域应该使用稳定键。这里的 key 不是给 Flutter
+显示的文本，而是用来说明“这块 UI 对应同一个业务对象”。例如列表重排后，`item.id`
+不变，Applet 就能继续把该项的状态和事件归属到同一个 item 上，避免状态或点击回调
+错位。
+
+## 渲染器职责
+
+渲染器应该：
+
+- 将 JavaScript 友好的属性归一化为 Flutter 构造值；
+- 校验枚举字符串和颜色/主题 token；
+- 构建 Flutter 组件，而不是 WebView 或字符串 UI；
+- 让布局、命中测试、语义和无障碍保留在 Flutter；
+- 对不支持的组件类型或非法属性给出可行动错误。
+
+渲染器不应该执行任意平台工作；这类能力应放在宿主动作后面。
+
+## 性能考虑
+
+高频路径是 JavaScript 渲染加 Flutter 组件构建。保持渲染输出紧凑，避免
+每个组件里重复生成大型静态数组，把重 IO 或业务工作放到宿主服务后面。
+
+大型页面使用 `RepaintBoundary`、sliver、稳定键和 Flutter 原生 scrollable。
+Applet 应该放大 Flutter 的优势，而不是用 JavaScript 手写布局引擎替代它。
+
+## 错误面
+
+常见失败分三类：
+
+| 类型 | 示例 | 响应 |
+| --- | --- | --- |
+| 加载 | asset 不存在、import 无效 | 展示加载/错误兜底 UI。 |
+| 渲染 | 组件抛错、JSON 无效 | 尽量保留旧组件树并记录日志。 |
+| 事件 | 回调抛错、宿主动作失败 | 记录错误并重新渲染。 |
+
+生产宿主应该同时提供友好的兜底 UI 和诊断信息：applet 版本、宿主版本、运行时版本、
+路由和动作名。

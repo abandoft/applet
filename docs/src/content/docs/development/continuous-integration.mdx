@@ -1,0 +1,85 @@
+---
+title: Continuous integration
+description: Checks, documentation builds, example validation, and Pages deployment.
+sidebar:
+  order: 3
+---
+
+## Recommended checks
+
+Run these checks for pull requests that touch Applet, the example, or docs:
+
+```sh
+flutter pub get
+dart format --set-exit-if-changed .
+flutter analyze
+flutter test
+flutter pub publish --dry-run
+(cd example && flutter pub get)
+(cd docs && pnpm install --frozen-lockfile)
+(cd docs && pnpm build)
+```
+
+## Example validation
+
+The example is part of the API surface. It should cover:
+
+- applet asset loading;
+- ES module imports;
+- state updates and callbacks;
+- Material components;
+- adaptive layout behavior;
+- runtime option configuration.
+
+For UI changes, prefer at least one desktop run and one narrow viewport check.
+
+For Applet renderer changes, add or update focused tests for:
+
+- prop normalization;
+- enum and color parsing;
+- callback/action dispatch;
+- layout helpers and adaptive breakpoints;
+- failure cases with actionable error messages.
+
+## Documentation deployment
+
+The docs project is a Starlight site under `docs/`. The GitHub Pages workflow
+should run on manual dispatch and when docs files change.
+
+The deployed site uses:
+
+```js
+site: "https://abandoft.github.io",
+base: "/applet",
+```
+
+Keep internal links base-aware. In content files, link to `/applet/...` for the
+English site and `/applet/zh/...` for Chinese pages.
+
+## Release checklist
+
+Before publishing a release:
+
+- update `CHANGELOG.md` and `CHANGELOG-ZH.md`;
+- verify `pubspec.yaml` dependency versions;
+- run package tests and example smoke tests;
+- build the docs site;
+- confirm GitHub Pages deploys the expected commit;
+- tag only after checks pass.
+
+## GitHub Pages workflow
+
+The docs workflow should run on manual dispatch and on changes under `docs/` or
+the workflow file itself. The current Pages build performs:
+
+1. checkout;
+2. pnpm setup;
+3. Node setup with lockfile cache;
+4. `pnpm install --frozen-lockfile`;
+5. `pnpm build`;
+6. upload `docs/dist`;
+7. deploy with GitHub Pages.
+
+Keep this workflow independent from Flutter package tests so docs fixes can be
+published quickly. For release branches, run the full Flutter checks before
+tagging.

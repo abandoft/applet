@@ -1,0 +1,133 @@
+---
+title: App model
+description: The entry file, root component, component functions, and event style.
+sidebar:
+  order: 1
+---
+
+Applet code starts from an ES module entry and defines the entry component with
+an `App()` function like the example below. A component is a JavaScript function
+that returns Flutter UI for the current state.
+
+```js title="src/app.js"
+import "@app/material";
+import HomeScreen from "./screens/home.js";
+import { appTheme } from "./theme.js";
+
+export default function App() {
+  return MaterialApp({
+    debugShowCheckedModeBanner: false,
+    theme: appTheme(),
+    home: HomeScreen(),
+  });
+}
+```
+
+The app's components are split into separate modules so the entry stays clear:
+
+```js title="src/screens/home.js"
+export default function HomeScreen() {
+  return Scaffold({
+    appBar: AppBar({ title: Text("Dashboard") }),
+    body: ListView([
+      ProfileHeader({
+        initials: "MO",
+        name: "Mona",
+        role: "Product manager",
+      }),
+      FilledButton("Create report", {
+        onPressed: () => console.log("create"),
+      }),
+    ]),
+  });
+}
+```
+
+## Component functions
+
+Component functions should be concise: pass data in and return UI.
+
+```js
+export function ProfileHeader(user) {
+  return HStack(
+    CircleAvatar({ child: Text(user.initials) }),
+    VStack(
+      Text(user.name).style({ theme: "titleMedium" }),
+      Text(user.role).style({ theme: "bodySmall", color: { theme: "onSurfaceVariant" } })
+    ).gap(2)
+  ).gap(12).cross("center");
+}
+```
+
+Component functions are a good fit for these jobs:
+
+- repeated layout structure;
+- a reusable control;
+- a screen section;
+- a model-backed screen.
+
+## Children and props
+
+Applet follows Flutter naming for props wherever possible:
+
+```js
+Card({
+  margin: 16,
+  child: Padding(
+    ListTile({
+      leading: Icon(Icons.palette),
+      title: Text("Color"),
+      subtitle: Text("Material 3 color roles"),
+      trailing: Icon(Icons.chevron_right),
+    }),
+    { padding: 12 }
+  ),
+});
+```
+
+For compact layout code, helper methods can be chained on nodes:
+
+```js
+Text("Revenue")
+  .style({ theme: "titleMedium" })
+  .textColor({ theme: "onSurface" });
+```
+
+Prefer the prop form when the value belongs to a Flutter constructor. Prefer the
+chained helper when it improves readability for common layout, color, or text
+adjustments.
+
+## Prefer direct callbacks
+
+Use closures for normal UI behavior:
+
+```js
+FilledButton("Save", {
+  onPressed: () => model.save(),
+});
+```
+
+Use named actions when the host must observe or own the result:
+
+```js
+FilledButton("Open scanner", {
+  onPressed: Applet.action("openScanner", { source: "checkout" }),
+});
+```
+
+Direct callbacks stay in JavaScript and are best for local UI state. Named
+actions cross the host boundary and should be reserved for platform services,
+analytics, permissions, or navigation controlled by Flutter.
+
+## Keep host-only concerns in Flutter
+
+The host should own platform-sensitive behavior:
+
+- platform channels and permissions;
+- secure storage and authentication;
+- payments and device APIs;
+- native navigation policy;
+- applet signature verification and rollout.
+
+Expose a small action surface to JavaScript instead of giving scripts broad
+platform access.

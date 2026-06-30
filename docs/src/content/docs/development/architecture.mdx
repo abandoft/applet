@@ -1,0 +1,93 @@
+---
+title: Architecture
+description: The major layers, ownership boundaries, and extension points.
+sidebar:
+  order: 1
+---
+
+Applet is split into a small Flutter host layer and a JavaScript runtime.
+JavaScript describes UI. Flutter owns rendering, layout, platform integration,
+accessibility, navigation, and native services.
+
+## Layers
+
+| Layer | Main files | Responsibility |
+| --- | --- | --- |
+| Host component | `applet_view.dart` | Flutter component API, loading/error UI, action observation. |
+| Controller | `applet_controller.dart` | Runtime lifecycle, module loading, render snapshots, reload. |
+| Bootstrap | `applet_bootstrap.dart` | JavaScript component factories, state helpers, callbacks. |
+| Modules | `applet_modules.dart` | Built-in `@app/*` module sources and aliases. |
+| Renderer | `applet_renderer.dart` | Validate component descriptions and build real Flutter widgets. |
+| Types | `types/app.d.ts` | Editor-facing JavaScript API and prop declarations. |
+
+The public API is intentionally small. Most apps use `Applet.asset()` or
+`Applet.source()`. Advanced hosts may own an `AppletController` directly when
+they need reload, bundle delivery, or custom lifecycle coordination.
+
+## Component model
+
+The JavaScript side should stay declarative. Components are functions that
+return component descriptions for the current state. The Flutter side validates
+those descriptions, resolves constructors, and builds real widgets.
+
+Applet should not turn Flutter into a loosely typed string-based UI system. The
+renderer needs clear node shapes, stable callback IDs, predictable keys, and
+explicit host capability boundaries.
+
+Each JavaScript component returns a node shaped like this:
+
+```json
+{
+  "type": "Text",
+  "props": {
+    "data": "Hello"
+  }
+}
+```
+
+The renderer maps `type` to a Flutter constructor and normalizes `props` into
+Flutter constructor arguments. Unknown components should fail with useful
+errors; they should not silently produce empty UI.
+
+## Module loading
+
+ES modules are the default. The asset passed to `Applet.asset()` is the entry
+module. Import maps and built-in aliases provide stable module names such as
+`@app/material`.
+
+Native and web module resolution should behave the same way:
+
+- resolve relative imports from the importing module;
+- apply aliases consistently;
+- reject unknown modules with actionable errors;
+- keep host-provided modules explicit.
+
+## Host boundary
+
+The host decides what a script can do. Scripts can request work through actions,
+but the host owns permissions, storage, networking, analytics, native channels,
+payments, and long-lived application services.
+
+Keep this boundary narrow. Expose business capabilities instead of raw platform
+primitives.
+
+## Extension points
+
+Applet has three extension levels:
+
+| Level | Use when |
+| --- | --- |
+| JavaScript module | You are composing existing Flutter-backed components. |
+| Host action | JavaScript needs to request platform or business work. |
+| Renderer factory | You need a new Flutter widget type or business widget binding. |
+
+Prefer the highest-level extension that works. Add renderer factories only when
+a widget must be built natively and cannot be expressed by existing components.
+
+## Compatibility
+
+Applet should keep native and web behavior aligned for module loading, runtime
+limits, and error reporting. A fix is not complete until both paths agree.
+
+For the step-by-step render sequence, see
+[Rendering pipeline](/applet/development/rendering-pipeline/).

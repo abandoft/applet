@@ -1,0 +1,94 @@
+---
+title: Theme configuration
+description: Material 3 themes, text styles, ColorScheme tokens, and dark mode.
+sidebar:
+  order: 4
+---
+
+Applet themes are Flutter themes. JavaScript creates `ThemeData` and
+`ColorScheme` objects; Flutter resolves them through `Theme.of(context)`.
+
+```js
+export function appTheme(seedColor, dark) {
+  return ThemeData({
+    useMaterial3: true,
+    brightness: dark ? "dark" : "light",
+    colorScheme: ColorScheme.fromSeed({
+      seedColor,
+      brightness: dark ? "dark" : "light",
+    }),
+    cardTheme: { elevation: 0 },
+    inputDecorationTheme: { border: "outline" },
+  });
+}
+```
+
+## Text style tokens
+
+Use the current Flutter `TextTheme` before applying local overrides:
+
+```js
+Text("Overview", {
+  style: {
+    theme: "headlineSmall",
+    color: { theme: "onSurface" },
+  },
+});
+```
+
+Supported text tokens include `displayLarge`, `headlineMedium`, `titleLarge`,
+`bodyMedium`, `labelSmall`, and the rest of Flutter's Material text roles.
+
+## ColorScheme tokens
+
+Prefer semantic color tokens over fixed color pairs:
+
+```js
+Container({
+  decoration: {
+    color: { theme: "surfaceContainerHighest", opacity: 0.3 },
+    border: { color: { theme: "outlineVariant" }, width: 1 },
+    borderRadius: 12,
+  },
+  child: Text("Theme-aware"),
+});
+```
+
+Color tokens can be written with `theme`, `colorScheme`, `role`, or `token`.
+Common roles include `primary`, `onPrimary`, `primaryContainer`,
+`surfaceContainerHighest`, `onSurfaceVariant`, `outline`, `outlineVariant`,
+`error`, `shadow`, and `scrim`.
+
+## When to use fixed colors
+
+Use fixed colors for brand assets, data visualization palettes, and
+content-derived colors. Use theme tokens for UI chrome, surfaces, labels,
+buttons, borders, and feedback states.
+
+## Theme ownership
+
+If the whole applet owns the visual shell, create the theme in JavaScript:
+
+```js
+MaterialApp({
+  theme: appTheme("#006a6a", false),
+  darkTheme: appTheme("#006a6a", true),
+  themeMode: model.dark ? "dark" : "light",
+  home: HomeScreen(model),
+});
+```
+
+If Flutter owns the host shell and applet is embedded inside an existing screen,
+prefer inheriting the host theme. Use local `Theme()` only for a bounded surface:
+
+```js
+Theme({
+  data: ThemeData({
+    colorScheme: ColorScheme.fromSeed({ seedColor: "#6750a4" }),
+  }),
+  child: PreviewCard(),
+});
+```
+
+Avoid mixing host-owned and applet-owned themes in the same surface unless there
+is an explicit product reason.

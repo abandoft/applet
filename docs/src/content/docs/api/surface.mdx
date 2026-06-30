@@ -1,0 +1,37 @@
+---
+title: API surface
+description: Entry points for the Dart host API, JavaScript API, and component modules.
+sidebar:
+  order: 1
+---
+
+Applet has two API surfaces:
+
+- Dart APIs used by the Flutter host to load, limit, observe, and reload
+  applets;
+- JavaScript APIs used by applet modules to describe Flutter UI.
+
+## Where to start
+
+| Page | Use it for |
+| --- | --- |
+| [Dart host API](/applet/api/dart-host/) | `Applet.asset`, `Applet.source`, `AppletController`, bundles, runtime options. |
+| [JavaScript API](/applet/api/javascript/) | `State`, `Applet.action`, node helpers, modules, default exports. |
+| [Component modules](/applet/api/components/) | `@app/material`, `@app/cupertino`, layout, widgets, and coverage strategy. |
+
+## Type hints
+
+Use `types/app.d.ts` in editors that support JavaScript type acquisition. It
+declares the built-in modules, common props, state helpers, theme tokens, and
+Flutter-shaped component factories.
+
+## Compatibility aliases
+
+New code should import `@app/*` modules. Compatibility aliases under
+`@applet/*` are still declared so older scripts continue to work:
+
+```js
+import { Text } from "@app/material";
+```
+
+Prefer the new module names in docs, examples, and new applets.

@@ -1,0 +1,132 @@
+---
+title: State and data flow
+description: Local state, stable keys, actions, and model objects.
+sidebar:
+  order: 3
+---
+
+State should live as close as possible to the UI that uses it. Render from
+state and update state in event handlers.
+
+## Local state
+
+```js
+export function Counter() {
+  const count = State(0);
+
+  return VStack(
+    Text("Count: " + count),
+    FilledButton("Increment", {
+      onPressed: () => count.update((value) => value + 1),
+    })
+  ).gap(8);
+}
+```
+
+`State()` returns a reference object. It can be read directly as a string, or by
+using `.value` when you need the raw value.
+
+Use `.set()`, `.update()`, or `.toggle()` to mutate local state:
+
+```js
+const enabled = State(true);
+
+Switch({
+  value: enabled.value,
+  onChanged: (value) => enabled.set(value),
+});
+
+IconButton({
+  icon: Icon(enabled.value ? Icons.visibility : Icons.visibility_off),
+  onPressed: () => enabled.toggle(),
+});
+```
+
+Use `State.key()` when state appears inside loops, conditionals, or shared
+model factories.
+
+```js
+export function GalleryState() {
+  const section = State.key("gallery.section", 0);
+  const dark = State.key("gallery.dark", false);
+
+  return {
+    get section() {
+      return section.value;
+    },
+    get dark() {
+      return dark.value;
+    },
+    selectSection(index) {
+      section.value = index;
+    },
+    toggleTheme() {
+      dark.toggle();
+    },
+  };
+}
+```
+
+## Host actions
+
+Use direct JavaScript callbacks for local work. Use `Applet.action()` for work
+that must cross into the host.
+
+```js
+IconButton({
+  icon: Icon(Icons.qr_code_scanner),
+  tooltip: "Scan",
+  onPressed: Applet.action("scanner.open", { flow: "checkout" }),
+});
+```
+
+The host receives an `AppletAction` with `name` and serializable `payload`.
+
+Use host actions for side effects that belong to Flutter:
+
+```js
+FilledButton("Track purchase", {
+  onPressed: Applet.action("analytics.track", {
+    name: "purchase_tap",
+    source: "checkout",
+  }),
+});
+```
+
+## Model factories
+
+For larger pages, wrap several state refs in a model factory:
+
+```js
+export function SettingsState() {
+  const dark = State.key("settings.dark", false);
+  const density = State.key("settings.density", "comfortable");
+
+  return {
+    get dark() {
+      return dark.value;
+    },
+    get density() {
+      return density.value;
+    },
+    toggleDark() {
+      dark.toggle();
+    },
+    setDensity(value) {
+      density.value = value;
+    },
+  };
+}
+```
+
+```js
+export function SettingsScreen(model) {
+  return ListView([
+    SwitchListTile({
+      title: Text("Dark theme"),
+      value: model.dark,
+      onChanged: () => model.toggleDark(),
+    }),
+  ]);
+}
+```

@@ -1,0 +1,139 @@
+---
+title: Dart host API
+description: Flutter-side widgets, controller lifecycle, bundles, actions, and runtime options.
+sidebar:
+  order: 2
+---
+
+The Dart host API embeds applets into Flutter and controls the runtime
+boundary.
+
+## Applet widget
+
+Use `Applet.asset()` for source shipped in Flutter assets:
+
+```dart
+const Applet.asset('src/app.js');
+```
+
+Use `Applet.source()` for tests, previews, or generated source:
+
+```dart
+Applet.source('''
+  import "@app/material";
+  export default function App() {
+    return Text("Preview");
+  }
+''');
+```
+
+Common parameters:
+
+| Parameter | Purpose |
+| --- | --- |
+| `controller` | Use an externally owned `AppletController`. |
+| `assetBundle` | Override the asset bundle used by `Applet.asset()`. |
+| `filename` | Filename shown in JavaScript stack traces. |
+| `module` | Whether the entry is an ES module. Defaults to `true`. |
+| `runtimeOptions` | Runtime limits used when the widget owns the controller. |
+| `renderer` | Optional renderer override for custom widget factories. |
+| `loadingBuilder` | Host loading UI before the first tree exists. |
+| `errorBuilder` | Host error UI when loading/rendering fails before a tree exists. |
+| `onAction` | Host observer for named JavaScript actions and event actions. |
+
+`AppletView` is the longer compatibility name. Application code should prefer
+`Applet`.
+
+## AppletController
+
+Use a controller when the host needs explicit lifecycle control:
+
+```dart
+final controller = AppletController(
+  options: const AppletRuntimeOptions(
+    memoryLimitBytes: 64 * 1024 * 1024,
+    maxStackSizeBytes: 2 * 1024 * 1024,
+  ),
+);
+
+await controller.loadAsset('src/app.js');
+```
+
+Main members:
+
+| Member | Purpose |
+| --- | --- |
+| `snapshot` | Latest `AppletSnapshot`. |
+| `runtime` | Direct runtime access for advanced integrations. |
+| `hasTree` | Whether at least one tree has rendered. |
+| `loadSource(source)` | Load one source string and render it. |
+| `loadAsset(assetKey)` | Load a Flutter asset and render it. |
+| `loadBundle(bundle)` | Register modules/import map/scripts and render. |
+| `reload()` | Reload the previous asset, source, or bundle. |
+| `render()` | Re-run the JavaScript render function. |
+| `dispatchAction(action)` | Send a Flutter event/action back to JavaScript. |
+| `readState()` | Read `Applet.state` for legacy/global-state integrations. |
+
+The controller owns a JavaScript runtime. Dispose it when the host owns it and
+the widget lifecycle no longer does.
+
+## AppletBundle
+
+Use bundles for remote or staged delivery:
+
+```dart
+final bundle = AppletBundle(
+  importMap: {
+    '@company/design': 'memory:design-system.js',
+  },
+  modules: {
+    'memory:design-system.js': designSystemSource,
+  },
+  scripts: [
+    AppletScript(entrySource, filename: 'campaign/app.js'),
+  ],
+);
+
+await controller.loadBundle(bundle);
+```
+
+`modules` are registered before scripts run. `importMap` maps stable module names
+to module identifiers. `scripts` are evaluated after modules are available.
+
+## Runtime options
+
+`AppletRuntimeOptions` configures JavaScript runtime limits:
+
+| Option | Default | Purpose |
+| --- | --- | --- |
+| `memoryLimitBytes` | `null` | Maximum JavaScript heap size. |
+| `maxStackSizeBytes` | `null` | Maximum JavaScript stack size. |
+| `timeout` | `2s` | Maximum synchronous JavaScript execution time. |
+| `promiseTimeout` | `3s` | Maximum Applet wait for JavaScript promises. |
+
+Set explicit limits for production and especially for remote bundles.
+
+## Actions
+
+JavaScript can emit an action:
+
+```js
+Applet.action("scanner.open", { source: "checkout" });
+```
+
+The host observes it with `onAction`:
+
+```dart
+Applet.asset(
+  'src/app.js',
+  onAction: (action) async {
+    if (action.name == 'scanner.open') {
+      await scanner.open(action.payload);
+    }
+  },
+);
+```
+
+`AppletAction` has `name`, optional `payload`, `toJson()`, and `withPayload()`.
+The renderer uses `withPayload()` when a Flutter event supplies a value, for
+example `onChanged`.

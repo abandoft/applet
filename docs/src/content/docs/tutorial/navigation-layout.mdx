@@ -1,0 +1,105 @@
+---
+title: Navigation and layout
+description: Adaptive shells, two-pane layouts, slivers, and responsive breakpoints.
+sidebar:
+  order: 5
+---
+
+Applet follows Flutter layout rules. Use normal Flutter-shaped widgets for
+ordinary layout and Flutter-backed Applet helpers for higher-level adaptive
+behavior.
+
+## Adaptive navigation
+
+`AdaptiveNavigationScaffold` switches between Material navigation surfaces using
+the same breakpoints as the Material 3 sample.
+
+```js
+return AdaptiveNavigationScaffold({
+  selectedIndex: model.section,
+  onDestinationSelected: (index) => model.selectSection(index),
+  destinations: [
+    NavigationDestination({ icon: Icon(Icons.widgets), label: "Components" }),
+    NavigationDestination({ icon: Icon(Icons.palette), label: "Color" }),
+    NavigationDestination({ icon: Icon(Icons.text_fields), label: "Typography" }),
+  ],
+  body: currentScreen(model),
+});
+```
+
+For local width decisions, use `LayoutBuilder`:
+
+```js
+LayoutBuilder({
+  compact: CompactHome(model),
+  medium: MediumHome(model),
+  expanded: ExpandedHome(model),
+});
+```
+
+Reserve adaptive shell components for page-level navigation. Use `LayoutBuilder`
+inside cards or screen sections where only the local arrangement changes.
+
+## Two-pane content
+
+`AdaptiveTwoPane` is useful for master-detail screens:
+
+```js
+AdaptiveTwoPane({
+  breakpoint: 1000,
+  primary: DemoList(model),
+  secondary: DemoDetails(model),
+});
+```
+
+In compact width it shows the single-pane content. In wide width Flutter runs
+the native size and offset transition.
+
+## Sliver lists
+
+For large static sliver lists with mixed child heights, use `SliverCachedList`.
+It caches measured child heights on the Flutter side to make scroll extent
+estimation steadier.
+
+```js
+CustomScrollView([
+  SliverAppBar.large({ title: Text("Components") }),
+  SliverPadding(
+    SliverCachedList(groups),
+    { padding: { horizontal: 16, vertical: 24 } }
+  ),
+]);
+```
+
+## Layout guidance
+
+- use `LayoutBuilder` for local breakpoint decisions;
+- use `OrientationBuilder` for portrait/landscape branches;
+- keep scrollables owned by Flutter widgets, not JavaScript loops with manual
+  offsets;
+- avoid layout code that relies on fixed device sizes;
+- use `Expanded`, `Flexible`, `Wrap`, and slivers before custom abstractions.
+
+## Scroll ownership
+
+Let one Flutter scrollable own a region. Avoid nesting `ListView` inside another
+vertical scrollable unless the inner list has a bounded height. For mixed
+headers, grids, and lists, prefer `CustomScrollView` with slivers:
+
+```js
+CustomScrollView([
+  SliverAppBar.large({ title: Text("Components") }),
+  SliverPadding(
+    SliverGrid({
+      delegate: demos.map((demo) => DemoCard(demo)),
+      gridDelegate: {
+        type: "fixedCrossAxisCount",
+        crossAxisCount: 2,
+        mainAxisSpacing: 16,
+        crossAxisSpacing: 16,
+      },
+    }),
+    { padding: 16 }
+  ),
+]);
+```

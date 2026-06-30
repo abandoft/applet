@@ -1,0 +1,140 @@
+---
+title: JavaScript API
+description: Applet 模块、状态辅助函数、动作、节点辅助方法和编写约定。
+sidebar:
+  order: 3
+---
+
+Applet 的 JavaScript 默认使用 ES module。
+
+```js
+import "@app/material";
+
+export default function App() {
+  return MaterialApp({
+    home: Scaffold({
+      body: Center(Text("Hello")),
+    }),
+  });
+}
+```
+
+## 模块
+
+| 模块 | 作用 |
+| --- | --- |
+| `@app/core` | 状态、动作、控制辅助函数和节点辅助方法。 |
+| `@app/widgets` | Flutter widgets 层基础组件。 |
+| `@app/layout` | 布局、sliver 和自适应辅助组件。 |
+| `@app/material` | Material 聚合导入，包含 core/widgets/layout。 |
+| `@app/cupertino` | Cupertino 聚合导入，包含 core/widgets/layout。 |
+
+入口中导入一次 `@app/material` 可获得全局组件名；功能模块中可以用命名导入获得编辑器
+提示。
+
+## 根导出
+
+只有入口模块的默认导出会作为 applet 根组件：
+
+```js title="src/app.js"
+export default function App() {
+  return HomeScreen();
+}
+```
+
+其他文件也可以默认导出，但只有被导入并调用时才会渲染。
+
+## State
+
+局部组件状态使用 `State()`：
+
+```js
+const count = State(0);
+
+FilledButton("Increment", {
+  onPressed: () => count.update((value) => value + 1),
+});
+```
+
+循环、条件分支或模型工厂重建中需要稳定状态时，使用 `State.key()`：
+
+```js
+const selected = State.key("settings.selected", "system");
+```
+
+`Remember` 是 `State` 的 alias。
+
+State ref 提供：
+
+| 成员 | 作用 |
+| --- | --- |
+| `value` | 读取或赋值当前值。 |
+| `set(next)` | 设置值或 reducer 结果。 |
+| `update(reducer)` | 根据当前值计算下一个值。 |
+| `toggle()` | 切换 boolean。 |
+| `action(next)` | 创建会更新该状态的动作描述。 |
+
+## 动作和回调
+
+本地 UI 行为使用闭包：
+
+```js
+Switch({
+  value: enabled.value,
+  onChanged: (value) => enabled.set(value),
+});
+```
+
+宿主拥有的能力使用命名动作：
+
+```js
+IconButton({
+  icon: Icon(Icons.qr_code_scanner),
+  onPressed: Applet.action("scanner.open", { source: "checkout" }),
+});
+```
+
+JavaScript 需要处理 Flutter 派回的命名动作时，使用 `Applet.onAction()`：
+
+```js
+Applet.onAction("refresh", () => {
+  model.reload();
+});
+```
+
+## 控制辅助函数
+
+| 函数 | 作用 |
+| --- | --- |
+| `For(items, render)` | 将数组渲染为子节点列表。 |
+| `Show(condition, view)` | 返回 view 或 `null`。 |
+| `Children(...items)` | 展平 child 列表。 |
+| `Action(name, payload)` | 创建动作节点描述。 |
+
+普通 JavaScript 数组方法同样可用：
+
+```js
+ListView(items.map((item) => ItemTile(item)));
+```
+
+## 节点辅助方法
+
+大多数组件工厂返回 `AppletNode`。常用辅助方法：
+
+| 方法 | 示例 |
+| --- | --- |
+| `padding(value)` | `Text("A").padding(8)` |
+| `margin(value)` | `Card(content).margin(12)` |
+| `width(value)` / `height(value)` | `Box().width(120)` |
+| `gap(value)` / `runGap(value)` | `VStack(children).gap(12)` |
+| `main(value)` / `cross(value)` | `HStack(children).main("spaceBetween")` |
+| `expanded(flex)` / `flexible(flex)` | `Panel().expanded()` |
+| `style(value)` | `Text("A").style({ theme: "titleMedium" })` |
+| `onTap(handler)` / `onPressed(handler)` | `Card(child).onTap(() => select())` |
+
+不常用的 Flutter 参数优先写构造属性；常见布局、文本和颜色微调可以使用辅助方法。
+
+## 旧式全局 API
+
+`Applet.initialState()`、`Applet.setState()` 和 `Applet.defineApp()` 仍可用于旧式全局
+脚本。新代码优先使用默认导出、`State()` 和闭包回调。

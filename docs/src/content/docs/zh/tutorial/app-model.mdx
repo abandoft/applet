@@ -1,0 +1,129 @@
+---
+title: 应用模型
+description: 入口文件、根组件、组件函数和事件写法。
+sidebar:
+  order: 1
+---
+
+Applet 代码从一个 ES module 入口开始，并通过如下方`App()`的方式定义为入口组件。组件是一个
+JavaScript 函数，它根据当前状态返回 Flutter 的 UI。
+
+```js title="src/app.js"
+import "@app/material";
+import HomeScreen from "./screens/home.js";
+import { appTheme } from "./theme.js";
+
+export default function App() {
+  return MaterialApp({
+    debugShowCheckedModeBanner: false,
+    theme: appTheme(),
+    home: HomeScreen(),
+  });
+}
+```
+
+应用中的组件已经拆分到独立模块，让入口保持清晰：
+
+```js title="src/screens/home.js"
+export default function HomeScreen() {
+  return Scaffold({
+    appBar: AppBar({ title: Text("Dashboard") }),
+    body: ListView([
+      ProfileHeader({
+        initials: "MO",
+        name: "Mona",
+        role: "Product manager",
+      }),
+      FilledButton("Create report", {
+        onPressed: () => console.log("create"),
+      }),
+    ]),
+  });
+}
+```
+
+## 组件函数
+
+组件函数应该简洁明了，传入数据并返回 UI。
+
+```js
+export function ProfileHeader(user) {
+  return HStack(
+    CircleAvatar({ child: Text(user.initials) }),
+    VStack(
+      Text(user.name).style({ theme: "titleMedium" }),
+      Text(user.role).style({ theme: "bodySmall", color: { theme: "onSurfaceVariant" } })
+    ).gap(2)
+  ).gap(12).cross("center");
+}
+```
+
+组件函数适合承担这些职责：
+
+- 重复布局结构；
+- 可复用控件；
+- 页面区块；
+- 绑定模型的页面。
+
+## children 和属性
+
+Applet 尽量沿用 Flutter 命名：
+
+```js
+Card({
+  margin: 16,
+  child: Padding(
+    ListTile({
+      leading: Icon(Icons.palette),
+      title: Text("Color"),
+      subtitle: Text("Material 3 color roles"),
+      trailing: Icon(Icons.chevron_right),
+    }),
+    { padding: 12 }
+  ),
+});
+```
+
+紧凑布局可以使用链式辅助方法：
+
+```js
+Text("Revenue")
+  .style({ theme: "titleMedium" })
+  .textColor({ theme: "onSurface" });
+```
+
+值本来属于 Flutter 构造参数时优先写属性对象；常见布局、颜色、文本微调可以使用链式
+方法，让代码更好读。
+
+## 优先使用直接回调
+
+普通 UI 行为直接使用闭包：
+
+```js
+FilledButton("Save", {
+  onPressed: () => model.save(),
+});
+```
+
+需要宿主处理结果时，使用命名动作：
+
+```js
+FilledButton("Open scanner", {
+  onPressed: Applet.action("openScanner", { source: "checkout" }),
+});
+```
+
+直接回调留在 JavaScript 内，适合本地 UI 状态。命名动作会跨到宿主边界，适合
+平台服务、统计、权限或由 Flutter 控制的导航。
+
+## 宿主专属能力留在 Flutter
+
+下面这些能力应由 Flutter 宿主拥有：
+
+- 平台通道和权限；
+- 安全存储和认证；
+- 支付和设备 API；
+- 原生导航策略；
+- applet 签名校验和发布灰度。
+
+给 JavaScript 暴露小而明确的动作，不要暴露宽泛的平台访问能力。

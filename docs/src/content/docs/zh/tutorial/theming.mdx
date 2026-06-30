@@ -1,0 +1,91 @@
+---
+title: 主题配置
+description: Material 3 主题、文本样式、ColorScheme token 和暗色模式。
+sidebar:
+  order: 4
+---
+
+Applet 主题就是 Flutter 主题。JavaScript 创建 `ThemeData` 和 `ColorScheme` 对象，
+Flutter 通过 `Theme.of(context)` 解析。
+
+```js
+export function appTheme(seedColor, dark) {
+  return ThemeData({
+    useMaterial3: true,
+    brightness: dark ? "dark" : "light",
+    colorScheme: ColorScheme.fromSeed({
+      seedColor,
+      brightness: dark ? "dark" : "light",
+    }),
+    cardTheme: { elevation: 0 },
+    inputDecorationTheme: { border: "outline" },
+  });
+}
+```
+
+## 文本样式 token
+
+先使用当前 Flutter `TextTheme`，再叠加局部覆盖：
+
+```js
+Text("Overview", {
+  style: {
+    theme: "headlineSmall",
+    color: { theme: "onSurface" },
+  },
+});
+```
+
+支持 `displayLarge`、`headlineMedium`、`titleLarge`、`bodyMedium`、
+`labelSmall` 等 Flutter Material 文本角色。
+
+## ColorScheme token
+
+优先使用语义色 token，而不是写死亮暗两套颜色：
+
+```js
+Container({
+  decoration: {
+    color: { theme: "surfaceContainerHighest", opacity: 0.3 },
+    border: { color: { theme: "outlineVariant" }, width: 1 },
+    borderRadius: 12,
+  },
+  child: Text("Theme-aware"),
+});
+```
+
+颜色 token 可以写在 `theme`、`colorScheme`、`role` 或 `token` 字段。常用角色包括
+`primary`、`onPrimary`、`primaryContainer`、`surfaceContainerHighest`、
+`onSurfaceVariant`、`outline`、`outlineVariant`、`error`、`shadow` 和 `scrim`。
+
+## 什么时候写固定颜色
+
+品牌资产、数据可视化色板和内容本身带来的颜色可以固定。界面框架、界面区域、
+标签、按钮、边框和反馈状态优先使用主题 token。
+
+## 主题归属
+
+如果整个 applet 拥有视觉壳层，可以在 JavaScript 中创建主题：
+
+```js
+MaterialApp({
+  theme: appTheme("#006a6a", false),
+  darkTheme: appTheme("#006a6a", true),
+  themeMode: model.dark ? "dark" : "light",
+  home: HomeScreen(model),
+});
+```
+
+如果 Flutter 拥有宿主壳层，applet 只是嵌入现有页面，优先继承宿主主题。局部
+`Theme()` 只用于有明确边界的界面区域：
+
+```js
+Theme({
+  data: ThemeData({
+    colorScheme: ColorScheme.fromSeed({ seedColor: "#6750a4" }),
+  }),
+  child: PreviewCard(),
+});
+```
+
+除非产品上有明确理由，不要在同一个界面区域里混用宿主主题和 applet 主题。

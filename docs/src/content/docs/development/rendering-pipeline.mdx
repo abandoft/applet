@@ -1,0 +1,111 @@
+---
+title: Rendering pipeline
+description: How source code becomes a Flutter widget tree and how updates flow back.
+sidebar:
+  order: 2
+---
+
+## First load
+
+1. Flutter inserts `Applet.asset()`, `Applet.source()`, or an `AppletView` with a
+   controller.
+2. `AppletView` creates an `AppletController` unless the host provides one.
+3. The controller creates a JavaScript runtime with `AppletRuntimeOptions`.
+4. Built-in Applet bootstrap code is installed into the runtime.
+5. Built-in modules such as `@app/material` and aliases are registered.
+6. The entry source is loaded from an asset, inline source, or `AppletBundle`.
+7. ES module dependencies are resolved and evaluated.
+8. The entry module default export is captured as the render function.
+9. `render()` calls the JavaScript render function and JSON-encodes the result.
+10. Flutter decodes the component description and stores an `AppletSnapshot`.
+11. `AppletRenderer` builds real Flutter widgets from the snapshot tree.
+
+## Update cycle
+
+Events enter the system in two ways:
+
+- a JavaScript closure callback created by the bootstrap layer;
+- a named `Applet.action()` that the host may observe.
+
+The renderer converts Flutter events into `AppletAction` values. `AppletView`
+first calls the optional host `onAction` observer, then asks the controller to
+dispatch the action into JavaScript. After dispatch, the controller renders
+again and publishes a new snapshot.
+
+```text
+Flutter event
+  -> AppletRenderer
+  -> AppletView.onAction
+  -> AppletController.dispatchAction()
+  -> JavaScript callback or Applet.onAction()
+  -> AppletController.render()
+  -> AppletSnapshot
+  -> Flutter rebuild
+```
+
+## Render state
+
+After each load, render, or event dispatch, `AppletController` stores an
+`AppletSnapshot`. It describes the current applet render state:
+
+| Field | Meaning |
+| --- | --- |
+| `tree` | The latest decoded component description. |
+| `loading` | Whether a load or reload is in progress. |
+| `error` | The last load, render, or dispatch error. |
+| `stackTrace` | Dart stack trace when available. |
+| `version` | Monotonic marker for rebuilds. |
+
+When rendering fails after a previous tree exists, the snapshot can keep the old
+tree and record the error. That lets the host decide whether to continue showing
+the last UI or replace it with an error surface.
+
+## Event callback routing
+
+JavaScript functions cannot be placed directly into the JSON passed to Flutter.
+Applet stores the function in a JavaScript-side callback table and writes only a
+serializable callback identifier into the component description. When Flutter
+fires an event, the identifier is sent back to Applet, which looks up and calls
+the original JavaScript function.
+
+For lists and conditional UI, stateful regions should use stable keys. A key is
+not visible text; it tells Applet that this part of the UI still represents the
+same item. For example, if a list is reordered but `item.id` stays the same,
+Applet can keep that item's state and events attached to the same row instead
+of accidentally shifting them to another row.
+
+## Renderer responsibilities
+
+The renderer should:
+
+- normalize JavaScript-friendly props into Flutter constructor values;
+- validate enum-like strings and color/theme tokens;
+- build Flutter widgets rather than web views or string-rendered UI;
+- keep layout, hit testing, semantics, and accessibility in Flutter;
+- emit actionable errors for unsupported widget types or invalid props.
+
+The renderer should not execute arbitrary platform work. That belongs behind
+host actions.
+
+## Performance considerations
+
+The expensive path is repeated JavaScript render plus Flutter widget build. Keep
+render output compact, avoid regenerating large static arrays inside every
+component, and move heavy IO or business work behind host services.
+
+Use `RepaintBoundary`, slivers, stable keys, and native Flutter scrollables for
+large screens. Applet should extend Flutter's strengths, not replace them with a
+manual JavaScript layout engine.
+
+## Error surfaces
+
+There are three categories of failures:
+
+| Category | Example | Response |
+| --- | --- | --- |
+| Load | asset missing, invalid import | show loading/error fallback. |
+| Render | component throws, invalid JSON | keep old tree if possible and log. |
+| Event | callback throws, host action fails | record error and re-render. |
+
+Production hosts should combine user-friendly fallbacks with diagnostics that
+include applet version, host version, runtime version, route, and action name.

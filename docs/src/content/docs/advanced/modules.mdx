@@ -1,0 +1,98 @@
+---
+title: Modules and imports
+description: Use Flutter-shaped import entry points and split applets into modules.
+sidebar:
+  order: 1
+---
+
+Applet uses ES modules by default. The asset passed to `Applet.asset()` is the
+entry module. Only that module's `export default` becomes the root component.
+Other modules may export defaults too, but they only render when imported and
+called by the entry.
+
+```js title="src/app.js"
+import "@app/material";
+import HomeScreen from "./screens/home.js";
+
+export default function App() {
+  return HomeScreen();
+}
+```
+
+## Built-in modules
+
+| Module | Use |
+| --- | --- |
+| `@app/core` | Applet state, actions, children helpers |
+| `@app/widgets` | Flutter widgets-layer primitives |
+| `@app/layout` | Layout, slivers, adaptive helpers |
+| `@app/material` | Material aggregate import, including widgets and layout |
+| `@app/cupertino` | Cupertino aggregate import |
+
+For most apps, import `@app/material` once in the entry and use named imports in
+feature modules when you want editor help:
+
+```js
+import { Scaffold, AppBar, Text, FilledButton, VStack } from "@app/material";
+```
+
+Legacy aliases under `@applet/*` remain available for compatibility, but new
+code should use `@app/*`.
+
+## Import rules
+
+Applet follows normal ES module syntax:
+
+```js
+import "@app/material";
+import { Text, FilledButton } from "@app/material";
+import SettingsScreen from "./screens/settings.js";
+```
+
+Rules to keep in mind:
+
+- module specifiers are strings, so quotes are required by JavaScript syntax;
+- relative imports resolve from the importing module;
+- the entry module is the file passed to `Applet.asset()` or the first script in
+  a bundle;
+- only the entry module's default export becomes the root component;
+- other default exports are ordinary functions until imported and called.
+
+## Bundles and import maps
+
+For remote or staged delivery, load an `AppletBundle` from Flutter:
+
+```dart
+await controller.loadBundle(
+  AppletBundle(
+    importMap: {'@company/ui': 'memory:ui.js'},
+    modules: {
+      'memory:ui.js': 'export const Title = (text) => Text(text);',
+    },
+    scripts: [
+      AppletScript(entrySource, filename: 'remote/app.js'),
+    ],
+  ),
+);
+```
+
+Use import maps for stable business module names. Keep relative imports for
+files that travel together in the same applet bundle.
+
+```dart
+AppletBundle(
+  importMap: {
+    '@company/design': 'memory:design-system.js',
+  },
+  modules: {
+    'memory:design-system.js': designSystemSource,
+  },
+  scripts: [
+    AppletScript(entrySource, filename: 'campaign/app.js'),
+  ],
+);
+```
+
+Import maps are best for host-provided libraries and shared design systems.
+Feature files inside one applet should still use relative imports so they remain
+portable.

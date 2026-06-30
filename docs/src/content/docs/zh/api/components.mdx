@@ -1,0 +1,120 @@
+---
+title: 组件模块
+description: widgets、layout、Material 和 Cupertino 的 Flutter 风格组件覆盖。
+sidebar:
+  order: 4
+---
+
+Applet 组件尽量沿用 Flutter 命名。目标是让 Flutter 开发者能识别组件、属性和
+主题模型，但完全采用用 JavaScript 编写。
+
+## import 模块
+
+| 模块 | 包含内容 |
+| --- | --- |
+| `@app/widgets` | Text、图片、图标、手势、语义、装饰、变换、基础动画。 |
+| `@app/layout` | Row/Column 辅助、stack、wrap、constraints、scroll view、sliver、自适应辅助。 |
+| `@app/material` | Material app shell、导航、按钮、输入、弹窗、反馈、数据、主题。 |
+| `@app/cupertino` | Cupertino app shell、导航栏、列表、picker、弹窗、输入和控件。 |
+
+为了方便使用，`@app/material` 和 `@app/cupertino` 会重新导出 core/widgets/layout API。
+
+## Material 示例
+
+```js
+Scaffold({
+  appBar: AppBar({ title: Text("Components") }),
+  floatingActionButton: FloatingActionButton({
+    child: Icon(Icons.add),
+    onPressed: () => model.create(),
+  }),
+  body: ListView([
+    Card(
+      ListTile({
+        leading: Icon(Icons.palette),
+        title: Text("Color"),
+        subtitle: Text("Material 3 roles"),
+        trailing: Icon(Icons.chevron_right),
+      })
+    ),
+  ]),
+});
+```
+
+常见 Material 分组：
+
+- app shell：`MaterialApp`、`Scaffold`、`AppBar`、`SliverAppBar`；
+- 导航：`NavigationBar`、`NavigationRail`、`NavigationDrawer`、tabs；
+- 操作：`FilledButton`、`OutlinedButton`、`TextButton`、`IconButton`、
+  `FloatingActionButton`；
+- 输入：`TextField`、`Checkbox`、`Radio`、`Switch`、`Slider`、
+  `DropdownButton`、menus；
+- 反馈：dialogs、snack bars、banners、tooltips、progress indicators；
+- 数据和内容：cards、lists、chips、tables、expansion panels；
+- 主题：`ThemeData`、`ColorScheme`、`Theme`、文本样式 token。
+
+## Cupertino 示例
+
+```js
+CupertinoPageScaffold({
+  navigationBar: CupertinoNavigationBar({
+    middle: Text("Settings"),
+  }),
+  child: CupertinoListSection([
+    CupertinoListTile({
+      title: Text("Notifications"),
+      trailing: CupertinoSwitch({
+        value: model.notifications,
+        onChanged: (value) => model.setNotifications(value),
+      }),
+    }),
+  ]),
+});
+```
+
+常见 Cupertino 分组：
+
+- app shell 和 page scaffold；
+- navigation bars 和 tab bars；
+- list sections 和 form rows；
+- 对话框和操作表；
+- buttons、switches、checkboxes、radios、sliders；
+- text fields、search fields、pickers、date/time pickers。
+
+## Layout 和自适应
+
+普通布局使用 Flutter 布局原语：
+
+```js
+HStack(
+  Icon(Icons.info),
+  VStack(
+    Text("Title").style({ theme: "titleMedium" }),
+    Text("Supporting text").style({ theme: "bodyMedium" })
+  ).gap(2).expanded()
+).gap(12).cross("center");
+```
+
+页面级行为使用自适应辅助：
+
+```js
+AdaptiveNavigationScaffold({
+  selectedIndex: model.section,
+  onDestinationSelected: (index) => model.selectSection(index),
+  destinations,
+  body: CurrentScreen(model),
+});
+```
+
+## 覆盖策略
+
+Applet 应该优先提供真实 Flutter 能力，而不是近似外观实现。缺少 Flutter 组件时，
+应该补充渲染器绑定或宿主扩展，不要用无关组件假装行为一致。
+
+每个新增组件都要同步：
+
+- JavaScript 工厂函数和属性归一化；
+- Flutter 渲染器实现；
+- `types/app.d.ts` 类型声明；
+- example 覆盖；
+- 用户可见时更新文档和 changelog。

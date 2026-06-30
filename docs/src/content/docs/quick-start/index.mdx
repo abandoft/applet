@@ -1,0 +1,112 @@
+---
+title: Quick start
+description: Add Applet, load a JavaScript entry file, and render native Flutter UI.
+sidebar:
+  order: 1
+---
+
+import { Steps, FileTree, Aside } from '@astrojs/starlight/components';
+
+<Steps>
+
+1. **Add the dependency.**
+
+   ```yaml
+   dependencies:
+     applet: ^1.0.0
+   ```
+
+2. **Register applet source assets.**
+
+   ```yaml
+   flutter:
+     uses-material-design: true
+     assets:
+       - src/
+   ```
+
+3. **Host the applet entry.**
+
+   ```dart
+   import 'package:applet/applet.dart';
+   import 'package:flutter/widgets.dart';
+
+   void main() {
+     runApp(const Applet.asset('src/app.js'));
+   }
+   ```
+
+4. **Write `src/app.js`.**
+
+   ```js
+   import "@app/material";
+
+   export default function App() {
+     const count = State(0);
+
+     return MaterialApp({
+       debugShowCheckedModeBanner: false,
+       title: "Applet",
+       theme: ThemeData({
+         useMaterial3: true,
+         colorScheme: ColorScheme.fromSeed({ seedColor: "#006a6a" }),
+       }),
+       home: Scaffold({
+         appBar: AppBar({ title: Text("Counter") }),
+         body: Center(
+           VStack(
+             Text("Count: " + count).style({ theme: "headlineMedium" }),
+             FilledButton("Increment", {
+               onPressed: () => count.update((value) => value + 1),
+             })
+           ).gap(12).min()
+         ),
+       }),
+     });
+   }
+   ```
+
+5. **Run Flutter.**
+
+   ```sh
+   flutter run
+   ```
+
+</Steps>
+
+## Recommended layout
+
+Keep the entry module thin and split features into focused modules.
+
+<FileTree>
+- src/
+  - app.js
+  - app/
+    - app.js
+    - state.js
+    - theme.js
+    - components.js
+    - screens/
+      - home.js
+      - settings.js
+</FileTree>
+
+```js title="src/app.js"
+import "@app/material";
+import App from "./app/app.js";
+
+export default App;
+```
+
+<Aside type="tip" title="Module mode is the default">
+`Applet.asset()` and `Applet.source()` run as ES modules by default. Use
+`module: false` only for legacy global scripts.
+</Aside>
+
+## Next steps
+
+- Learn the authoring model in [App model](/applet/tutorial/app-model/).
+- Split real screens using
+  [Components and screens](/applet/tutorial/components/).
+- Add local state with [State and data flow](/applet/tutorial/state/).
+- Review production limits in [Runtime safety](/applet/advanced/runtime-safety/).

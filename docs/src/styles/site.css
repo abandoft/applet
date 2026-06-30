@@ -1,0 +1,58 @@
+:root {
+  --sl-color-accent-low: #d7f8ff;
+  --sl-color-accent: #0874c8;
+  --sl-color-accent-high: #00345f;
+  --sl-color-white: #ffffff;
+  --sl-color-gray-1: #f6f8fb;
+  --sl-color-gray-2: #e8edf3;
+  --sl-color-gray-3: #cbd5e1;
+  --sl-color-gray-4: #94a3b8;
+  --sl-color-gray-5: #64748b;
+  --sl-color-gray-6: #334155;
+  --sl-color-black: #0f172a;
+}
+
+:root[data-theme='dark'] {
+  --sl-color-accent-low: #06365c;
+  --sl-color-accent: #7dd3fc;
+  --sl-color-accent-high: #dff8ff;
+  --sl-color-gray-1: #e7eef7;
+  --sl-color-gray-2: #c7d2df;
+  --sl-color-gray-3: #94a3b8;
+  --sl-color-gray-4: #64748b;
+  --sl-color-gray-5: #334155;
+  --sl-color-gray-6: #1e293b;
+  --sl-color-black: #0b1120;
+}
+
+.hero img {
+  filter: drop-shadow(0 16px 40px rgb(8 116 200 / 20%));
+}
+
+.site-title img {
+  object-position: 50% 50%;
+}
+
+.sl-markdown-content .card .title > svg.icon {
+  box-sizing: border-box;
+  display: block;
+  width: 1.85em;
+  height: 1.85em;
+  padding: 0.28em;
+}
+
+.sl-markdown-content .sl-link-card > svg.icon {
+  align-self: center;
+  justify-self: center;
+}
+
+.sl-markdown-content table td,
+.sl-markdown-content table th {
+  vertical-align: top;
+}
+
+.code-caption {
+  color: var(--sl-color-gray-3);
+  font-size: 0.9rem;
+  margin-top: -0.75rem;
+}

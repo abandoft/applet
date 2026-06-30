@@ -1,0 +1,101 @@
+---
+title: 导航和布局
+description: 自适应壳层、双栏布局、sliver 和响应式断点。
+sidebar:
+  order: 5
+---
+
+Applet 遵循 Flutter 布局规则。普通布局使用 Flutter 风格组件，高阶自适应行为使用
+Applet 提供的原生辅助组件。
+
+## 自适应导航
+
+`AdaptiveNavigationScaffold` 会按 Material 3 sample 的断点在不同导航界面
+之间切换。
+
+```js
+return AdaptiveNavigationScaffold({
+  selectedIndex: model.section,
+  onDestinationSelected: (index) => model.selectSection(index),
+  destinations: [
+    NavigationDestination({ icon: Icon(Icons.widgets), label: "Components" }),
+    NavigationDestination({ icon: Icon(Icons.palette), label: "Color" }),
+    NavigationDestination({ icon: Icon(Icons.text_fields), label: "Typography" }),
+  ],
+  body: currentScreen(model),
+});
+```
+
+局部宽度判断使用 `LayoutBuilder`：
+
+```js
+LayoutBuilder({
+  compact: CompactHome(model),
+  medium: MediumHome(model),
+  expanded: ExpandedHome(model),
+});
+```
+
+页面级导航使用自适应壳层；只有局部排列变化时，在卡片或页面区块内使用
+`LayoutBuilder`。
+
+## 双栏内容
+
+`AdaptiveTwoPane` 适合主从详情页：
+
+```js
+AdaptiveTwoPane({
+  breakpoint: 1000,
+  primary: DemoList(model),
+  secondary: DemoDetails(model),
+});
+```
+
+紧凑宽度显示单栏，宽屏时由 Flutter 执行原生尺寸和偏移转场。
+
+## Sliver 列表
+
+高度不完全一致的大型静态 sliver 列表可以使用 `SliverCachedList`。它会在 Flutter
+侧缓存子项高度，让滚动范围估算更稳定。
+
+```js
+CustomScrollView([
+  SliverAppBar.large({ title: Text("Components") }),
+  SliverPadding(
+    SliverCachedList(groups),
+    { padding: { horizontal: 16, vertical: 24 } }
+  ),
+]);
+```
+
+## 布局建议
+
+- 局部断点用 `LayoutBuilder`；
+- 横竖屏分支用 `OrientationBuilder`；
+- 滚动交给 Flutter 组件，不在 JS 里手动维护滚动偏移；
+- 不依赖固定设备尺寸；
+- 自定义抽象前先考虑 `Expanded`、`Flexible`、`Wrap` 和 sliver。
+
+## 滚动归属
+
+让一个 Flutter scrollable 拥有一个滚动区域。除非内部列表有明确高度，不要把
+`ListView` 嵌进另一个纵向滚动组件。混合 header、grid、list 时优先使用
+`CustomScrollView` 和 sliver：
+
+```js
+CustomScrollView([
+  SliverAppBar.large({ title: Text("Components") }),
+  SliverPadding(
+    SliverGrid({
+      delegate: demos.map((demo) => DemoCard(demo)),
+      gridDelegate: {
+        type: "fixedCrossAxisCount",
+        crossAxisCount: 2,
+        mainAxisSpacing: 16,
+        crossAxisSpacing: 16,
+      },
+    }),
+    { padding: 16 }
+  ),
+]);
+```

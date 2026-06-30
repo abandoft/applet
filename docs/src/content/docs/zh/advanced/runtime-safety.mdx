@@ -1,0 +1,82 @@
+---
+title: 运行时安全
+description: 为生产环境配置内存、栈和超时限制。
+sidebar:
+  order: 3
+---
+
+生产宿主应该显式配置运行时限制。这些参数会在 Applet controller 创建 JavaScript
+运行时时生效。
+
+```dart
+Applet.asset(
+  'src/app.js',
+  runtimeOptions: const AppletRuntimeOptions(
+    memoryLimitBytes: 64 * 1024 * 1024,
+    maxStackSizeBytes: 2 * 1024 * 1024,
+    timeout: Duration(seconds: 2),
+    promiseTimeout: Duration(seconds: 3),
+  ),
+);
+```
+
+## 参数
+
+| 参数 | 作用 | 常见起点 |
+| --- | --- | --- |
+| `memoryLimitBytes` | 限制 JS 堆内存。 | UI applet 可从 32-128 MB 开始。 |
+| `maxStackSizeBytes` | 限制 JS 调用栈。 | 1-4 MB。 |
+| `timeout` | 限制同步 JavaScript 执行。 | 小组件 500 ms，大 Bundle 2 s。 |
+| `promiseTimeout` | 限制 Applet 等待 JavaScript Promise 的时间。 | 按 Bundle 大小从 1-5 s 开始。 |
+
+`timeout` 保护同步求值和动作派发。`promiseTimeout` 保护 Applet 自己等待的异步过程，
+例如渲染求值。它不是网络请求超时；网络能力应由宿主拥有，并单独配置超时。
+
+## 如何选择
+
+开发期可以宽松一些，测量真实 applet 后再收紧到有安全余量的范围。
+
+```dart
+const galleryRuntimeOptions = AppletRuntimeOptions(
+  memoryLimitBytes: 96 * 1024 * 1024,
+  maxStackSizeBytes: 4 * 1024 * 1024,
+  timeout: Duration(seconds: 2),
+  promiseTimeout: Duration(seconds: 3),
+);
+```
+
+不同信任级别使用不同配置：
+
+| 场景 | 建议配置 |
+| --- | --- |
+| 内置 asset applet | 中等内存，2-3 s 启动超时。 |
+| 远程签名 applet | 更严格内存限制，显式签名和版本校验。 |
+| 预览或测试源码 | 更短超时和用户可见错误 UI。 |
+| 大型内部工具 | 先测量，再把限制固化到代码。 |
+
+## 运行建议
+
+- 不执行未校验的远程代码；
+- 调试环境和生产环境使用不同限制；
+- 关键页面前预取或预加载远程 Bundle；
+- 加载失败要有用户可见的兜底 UI；
+- 运行时错误记录 applet 版本和路由上下文；
+- 把宿主动作当作权限边界。
+
+## 失败处理
+
+即使默认 UI 在开发期足够，生产环境也应该使用 `loadingBuilder` 和 `errorBuilder`：
+
+```dart
+Applet.asset(
+  'src/app.js',
+  runtimeOptions: productionAppletOptions,
+  loadingBuilder: (context, snapshot) =>
+      const Center(child: CircularProgressIndicator()),
+  errorBuilder: (context, error, stackTrace) =>
+      AppletFailureView(error: error),
+);
+```
+
+日志应包含排查所需上下文，但不要暴露敏感载荷：applet id、applet 版本、宿主 App
+版本、运行时版本、路由和错误类型。

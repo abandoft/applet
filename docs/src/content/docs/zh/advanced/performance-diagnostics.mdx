@@ -1,0 +1,85 @@
+---
+title: 性能和诊断
+description: 让 applet 在生产环境中保持快速、可观测、可恢复。
+sidebar:
+  order: 5
+---
+
+Applet 性能由 JavaScript 渲染成本和 Flutter 组件工作共同决定。目标是让
+JavaScript 只负责声明式描述，让 Flutter 继续拥有布局、绘制、命中测试、无障碍和滚动。
+
+## 渲染成本
+
+一次渲染包含：
+
+1. JavaScript 组件执行；
+2. 组件描述 JSON 编码；
+3. Dart JSON 解码；
+4. `AppletRenderer` 构建 Flutter 组件；
+5. Flutter 布局和绘制。
+
+让 JavaScript 部分保持可预测：
+
+- 不在组件函数里做重计算；
+- 大型静态目录定义在渲染函数外；
+- 服务端数据进入 UI 前先归一化；
+- 重复有状态区域使用稳定 key；
+- IO、加密、存储、网络交给宿主服务。
+
+## 列表和滚动
+
+优先使用 Flutter 滚动组件和 sliver，不在 JavaScript 里手动维护滚动偏移：
+
+```js
+CustomScrollView([
+  SliverAppBar.large({ title: Text("Reports") }),
+  SliverList(reports.map((report) => ReportTile(report))),
+]);
+```
+
+大型滚动区域使用网格和 sliver。只有一个小状态变化时，避免重新生成大型嵌套数组。
+
+## 诊断上下文
+
+applet 失败时，日志应包含足够版本上下文：
+
+| 字段 | 示例 |
+| --- | --- |
+| applet id | `material3-demo` |
+| applet 版本 | `1.3.2+45` |
+| 宿主 App 版本 | `2.8.0` |
+| 运行时版本 | `1.1.0` |
+| 路由/页面 | `/settings/theme` |
+| 动作名 | `scanner.open` |
+| 运行时限制配置 | `remote-strict` |
+
+不要记录敏感载荷字段。诊断上报前先脱敏用户数据。
+
+## 恢复策略
+
+生产宿主应支持：
+
+- 首次渲染 loading UI；
+- 没有组件树时的错误 UI；
+- 最后一个可用 Bundle 兜底；
+- 远程 Bundle 健康状态标记；
+- 显式回滚；
+- 灰度异常时禁用 applet 的开关。
+
+远程交付时，下载成功只是第一步。一个 Bundle 只有在校验、加载、渲染并通过基本用户
+操作后，才算健康。
+
+## 测量
+
+这些指标要分开测：
+
+- Bundle 下载和校验时间；
+- JavaScript 运行时创建；
+- module 加载和执行时间；
+- 首次渲染时间；
+- 动作到渲染的延迟；
+- 渲染后的 Flutter 帧耗时。
+
+首次渲染慢，优先减少模块体积和静态初始化。动作延迟高，检查 JavaScript 状态更新
+和宿主动作往返。Flutter 帧慢，检查组件复杂度、图片、sliver 和
+repaint boundary。
