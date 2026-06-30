@@ -1,0 +1,22 @@
+name: applet
+description: "A JSF-backed JavaScript hot-update framework for Flutter widgets."
+version: 1.0.0
+homepage: https://github.com/abandoft/applet
+
+environment:
+  sdk: ">=3.9.0"
+  flutter: ">=3.35.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  jsf: ^1.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+dependency_overrides:
+  jsf:
+    path: ../jsf
