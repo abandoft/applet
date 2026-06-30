@@ -9,8 +9,8 @@ renders as real widgets. Components, properties, functions, themes, and imports
 stay close to Flutter while the authoring style feels closer to SwiftUI and
 Jetpack Compose.
 
-It is not a WebView. It uses a controlled JavaScript runtime to drive native
-Flutter UI.
+Applet is not a WebView. It uses a controlled JavaScript runtime to drive
+native Flutter UI.
 
 ## Highlights
 

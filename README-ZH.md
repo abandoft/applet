@@ -8,7 +8,7 @@ Applet 是一个基于 Flutter 的 JavaScript 热更新框架。
 渲染成真实 widget；组件、属性、函数、主题和导入方式尽量贴近 Flutter，
 同时提供类似 SwiftUI / Jetpack Compose 的现代化声明式写法。
 
-不是嵌一个 WebView，而是用可控的 JS 运行时驱动原生 Flutter UI。
+Applet 不是 WebView，而是用可控的 JS 运行时驱动原生 Flutter UI。
 
 ## 项目特色
 
